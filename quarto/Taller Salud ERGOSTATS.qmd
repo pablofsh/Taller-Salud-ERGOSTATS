@@ -12,14 +12,16 @@ execute:
 ::: callout-note
 # Objetivos de esta sección
 
-1.  
+1.  Obtener los centroides para cada una de las zonas censales (unidades geográficas).
+
+2.  Crear las isócronas para cada zona censal con zonas de influencia de 0-10 min y de 10-20 min.
 :::
 
-### Cargar librerias necesarias
+## Cargar librerías y datos 
 
 ```{r}
 
-# Librerias
+# Cargar Librerias
 
 if (!require("pacman")) {
   install.packages("pacman")
@@ -36,14 +38,9 @@ pacman::p_load(
   sp
 )
 
-```
-
-### Importar datos
-
-```{r}
+# Importar datos
 
 ruta <- "../data/gpkg/base_map_dmq.gpkg"
-
 mapa_base_dmq <- st_read(ruta,
                          layer = "dmq")
 
@@ -52,12 +49,14 @@ mapa_base_dmq <- st_read(ruta,
 ## Transformacion de los datos
 
 ```{r}
+
 # Crear una poblacion aleatoria
 set.seed(123)
 
 mapa_base_dmq <- mapa_base_dmq %>% 
-  mutate(
-    poblacion = sample(1000:10000, n(), replace = TRUE))
+  mutate(poblacion = sample(1000:10000, 
+                            n(), 
+                            replace = TRUE))
 
 head(mapa_base_dmq)
 
