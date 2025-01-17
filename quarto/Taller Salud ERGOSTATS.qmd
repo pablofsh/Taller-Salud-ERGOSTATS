@@ -1,0 +1,247 @@
+---
+title: "Taller Salud ERGOSTATS"
+author: "Pablo Sarango"
+format: html
+editor: visual
+execute:
+  eval: false
+---
+
+# Crear las zonas de influencia o captación
+
+::: callout-note
+# Objetivos de esta sección
+
+1.  
+:::
+
+### Cargar librerias necesarias
+
+```{r}
+
+# Librerias
+
+if (!require("pacman")) {
+  install.packages("pacman")
+  library(pacman)
+} 
+
+pacman::p_load(
+  sf,
+  tidyverse,
+  leaflet,
+  profvis,
+  hereR,        # Paquete para acceder a la API HERE 
+  osmdata,
+  sp
+)
+
+```
+
+### Importar datos
+
+```{r}
+
+ruta <- "../data/gpkg/base_map_dmq.gpkg"
+
+mapa_base_dmq <- st_read(ruta,
+                         layer = "dmq")
+
+```
+
+## Transformacion de los datos
+
+```{r}
+# Crear una poblacion aleatoria
+set.seed(123)
+
+mapa_base_dmq <- mapa_base_dmq %>% 
+  mutate(
+    poblacion = sample(1000:10000, n(), replace = TRUE))
+
+head(mapa_base_dmq)
+
+# Obtener los centroides de estas zonas 
+centroides_dmq <- st_centroid(mapa_base_dmq)
+
+plot(st_geometry(centroides_dmq))
+```
+
+## Crear Isocronas
+
+```{r}
+
+# Configurar la llave de HERE
+here_key <- ""
+set_key(here_key)
+
+# Create directory to store isochrone shapefiles
+dir.create("data/shp", showWarnings = FALSE)
+
+# Prueba 
+
+isocrona <- isoline(
+  poi = centroides_dmq[1,],
+  range = seq(10, 20, 10) * 60,
+  range_type = "time",
+  datetime <- as.POSIXct(paste0(Sys.Date()," 10:00"))
+  ) 
+
+str(isocrona)
+
+# Loop para crear isocronas por cada centroide
+
+for(i in 1:nrow(centroides_dmq)){
+  
+  isocrona <- isoline(
+    poi = centroides_dmq[i,],
+    range = seq(10, 20, 10) * 60,
+    range_type = "time",
+    datetime <- as.POSIXct(paste0(Sys.Date()," 10:00"))
+  ) %>%
+    mutate(name = paste0((range - 600) / 60," to ", range / 60, " mins"))
+
+  # Guardar poligonos en carpeta shp 
+  dsn <- paste0("data/shp/")
+  layer <- centroides_dmq$zon[i]
+  
+  st_write(obj = isocrona,
+           dsn = dsn,
+           layer = layer,
+           driver = "ESRI Shapefile",
+           append = TRUE)
+ 
+  # Add a 1 second pause to prevent overload
+  pause(1)
+}
+
+```
+
+# Crear la matriz de influencia o captación
+
+```{r}
+
+# Ubicación de hosptiales en DMQ
+
+hospitales_dmq <- getbb("Quito Ecuador") %>% 
+  opq() %>% 
+  add_osm_feature(key = "amenity",
+                  value = "hospital") %>% 
+  osmdata_sf()
+
+str(hospitales_dmq)
+
+hospitales_df <- hospitales_dmq$osm_polygons %>% 
+  select(name, geometry) %>% 
+  st_centroid() %>% 
+  na.omit()
+
+st_write(hospitales_df, "hospitales.shp")
+
+# Colocar los hospitales sobre las areas de interes (isocronas)
+
+shp_test <- st_read("data/shp/170150001.shp") #isocrona 
+
+st_layers("data/shp/170150001.shp")
+
+# Lista -------------------------------------------------------------------
+
+isochrone_list <- "data/shp/"
+
+shape.extension <- list.files(path = isochrone_list,
+                              pattern = ".shp",
+                              full.names = TRUE)
+
+shape.names <- list.files(path = isochrone_list,
+                          pattern = ".shp",
+                          full.names = FALSE) %>%
+  str_remove(".shp")
+
+# Creamos la matriz 
+
+matriz <- matrix(ncol = length(1),
+                 nrow = nrow(hospitales_df))
+
+colnames(matriz) <- shp_test
+rownames(matriz) <- hospitales_df$name
+
+
+head(matriz)
+
+lista <- list()
+
+for(i in 1:3){
+  
+  iso <- st_read(shape.extension[i])
+  
+  lista[[i]] <- st_join(hospitales_df,
+                        iso[2,], 
+                        join = st_within) %>% 
+    select(name.x, name.y) %>% 
+    rename_with(.cols = name.y, 
+                .fn = ~paste0(.x, i)) %>% 
+    as_tibble()
+}
+
+df <- reduce(lista, left_join)
+
+funcion_join <- function(iso, indice){
+  
+  iso <- st_read(iso)
+  
+  st_join(hospitales_df,
+          iso, 
+          join = st_within) %>% 
+    select(hospital = name.x, name.y) %>% 
+    group_by(hospital, geometry) %>% 
+    summarise(n = n_distinct(name.y),
+              n2 = sum(is.na(name.y))) %>%
+    mutate(n = n-n2) %>%
+    select(-n2) %>% 
+    rename_with(.cols = n,
+                .fn = ~paste0("shape_", indice)) %>%
+    as_tibble()
+}
+
+lista_2 <- map2(.x = shape.extension[1:10],
+                .y = 1:10,
+                funcion_join)
+
+lista_3 <- map2(.x = shape.extension[1:3], 
+                .y = 1:3, 
+                funcion_join,
+                fila = 2)
+
+df_2 <- reduce(lista_2, left_join)
+df_3 <- reduce(lista_3, left_join)
+
+a <- st_join(hospitales_df,
+             shp_test, 
+             join = st_within) %>% 
+  select(name.x, name.y)
+
+str(hospitales_df)
+
+
+for(i in 1:length(matriz)){
+  matriz[,i] <- st_intersects(hospitales_df,
+                                shp_test)$name
+}
+
+# Step 1: Check dimensions and types
+print(dim(hospitales_df))
+print(class(hospitales_df))
+print(dim(shp_test))
+print(class(shp_test))
+
+st_crs(hospitales_df) == st_crs(shp_test)
+
+length(hospitales_df) == length(shp_test)
+
+```
+
+# Crear la matriz de ponderaciones o pesos
+
+# Medidas de la oferta y la demanda
+
+# Calcular el Índice de acceso espacial
