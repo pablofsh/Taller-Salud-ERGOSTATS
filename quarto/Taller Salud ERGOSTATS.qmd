@@ -56,8 +56,6 @@ mapa_base_dmq <- mapa_base_dmq %>%
                             n(), 
                             replace = TRUE))
 
-head(mapa_base_dmq)
-
 # Obtener los centroides de cada zona censal
 centroides_dmq <- st_centroid(mapa_base_dmq) %>% 
   # Transformar de UTM a Geograficas 
@@ -76,7 +74,7 @@ leaflet() %>%
 
 ## Crear Isocronas
 
-### Crear un solo conjunto de isocronas 
+### Crear un solo conjunto de isocronas
 
 ```{r}
 
@@ -116,7 +114,7 @@ leaflet() %>%
 
 ```
 
-### Crear isocronas por cada centroide 
+### Crear isocronas por cada centroide
 
 ```{r}
 
@@ -152,7 +150,14 @@ for(i in 1:nrow(centroides_dmq)){
 }
 ```
 
-# Crear la matriz de influencia o captación
+# Sección 2: Crear la matriz de influencia o captación
+
+::: callout-note
+## Objetivos de esta sección
+
+1.  Trazar las ubicaciones de los proveedores sobre las zonas de influencia.
+2.  Generar una matriz que identifice en qué subzona está localizada cada proveedor para cada zona censal.
+:::
 
 ```{r}
 
