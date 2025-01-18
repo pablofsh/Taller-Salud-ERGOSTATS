@@ -7,7 +7,7 @@ execute:
   eval: false
 ---
 
-# Crear las zonas de influencia o captación
+# Sección 1: Crear las zonas de influencia o captación
 
 ::: callout-note
 # Objetivos de esta sección
@@ -17,21 +17,20 @@ execute:
 2.  Crear las isócronas para cada zona censal con zonas de influencia de 0-10 min y de 10-20 min.
 :::
 
-## Cargar librerías y datos 
+## Cargar librerías y datos
 
 ```{r}
 
 # Cargar Librerias
-
 if (!require("pacman")) {
   install.packages("pacman")
   library(pacman)
 } 
 
 pacman::p_load(
-  sf,
-  tidyverse,
-  leaflet,
+  sf,           # Manipulación de datos espaciales
+  tidyverse,    # Manipulación de datos 
+  leaflet,      # Crear mapas interactivos
   profvis,
   hereR,        # Paquete para acceder a la API HERE 
   osmdata,
@@ -39,7 +38,6 @@ pacman::p_load(
 )
 
 # Importar datos
-
 ruta <- "../data/gpkg/base_map_dmq.gpkg"
 mapa_base_dmq <- st_read(ruta,
                          layer = "dmq")
@@ -50,7 +48,7 @@ mapa_base_dmq <- st_read(ruta,
 
 ```{r}
 
-# Crear una poblacion aleatoria
+# Crear una poblacion aleatoria para cada zona censal
 set.seed(123)
 
 mapa_base_dmq <- mapa_base_dmq %>% 
@@ -60,36 +58,73 @@ mapa_base_dmq <- mapa_base_dmq %>%
 
 head(mapa_base_dmq)
 
-# Obtener los centroides de estas zonas 
-centroides_dmq <- st_centroid(mapa_base_dmq)
+# Obtener los centroides de cada zona censal
+centroides_dmq <- st_centroid(mapa_base_dmq) %>% 
+  # Transformar de UTM a Geograficas 
+  st_transform(4326)
 
-plot(st_geometry(centroides_dmq))
+# Visualizar los centroides
+leaflet() %>% 
+  # Añadir mapa base 
+  addProviderTiles("CartoDB.Positron", 
+                   group="Greyscale") %>% 
+  
+  # Añadir los centroides
+  addCircleMarkers(data = centroides_dmq)
+  
 ```
 
 ## Crear Isocronas
 
+### Crear un solo conjunto de isocronas 
+
 ```{r}
 
 # Configurar la llave de HERE
-here_key <- ""
-set_key(here_key)
+# here_key <- ""
+# set_key(here_key)
 
-# Create directory to store isochrone shapefiles
-dir.create("data/shp", showWarnings = FALSE)
-
-# Prueba 
-
-isocrona <- isoline(
+# Crear isocronas
+iso <- isoline(
+  # Punto(s) desde donde parte la isocrona. Debe ser un objeto sf
   poi = centroides_dmq[1,],
-  range = seq(10, 20, 10) * 60,
+  
+  # Vector que contiene los intervalos de corte en segundos (10 y 20 min) 
+  range = c(10,20)*60,
+  
+  # Indica el tipo de rango: tiempo, distancia o energia 
   range_type = "time",
-  datetime <- as.POSIXct(paste0(Sys.Date()," 10:00"))
-  ) 
+  
+  # Fecha y tiempo del calculo para simular trafico en tiempo real 
+  datetime = as.POSIXct(paste0(Sys.Date(), " 10:00"))
+  
+) %>%
+  # Le asignamos una columna nueva para identificar cada nivel de las isocronas
+  mutate(name = paste0((range - 600) / 60," to ", range / 60, " mins")) 
 
-str(isocrona)
+# Transformar el objeto sf a SpatialPolygonDataFrame para visualizarlo con leaflet
+iso_vis <- as(iso, "Spatial")
 
-# Loop para crear isocronas por cada centroide
+# Visualizar las isocronas
+leaflet() %>% 
+  # Añadir mapa base 
+  addProviderTiles("CartoDB.Positron", 
+                   group="Greyscale") %>% 
+  
+  # Añadir las isocronas
+  addPolygons(data = iso)
 
+```
+
+### Crear isocronas por cada centroide 
+
+```{r}
+
+# Crear una carpeta para guardar los shapefiles de las isocronas
+dir.create("../data/shp/isocronas/", 
+           showWarnings = FALSE)
+
+# Bluce para crear un conjunto de isocronas de 0-10 y 10-20 min por cada centroide
 for(i in 1:nrow(centroides_dmq)){
   
   isocrona <- isoline(
@@ -100,8 +135,10 @@ for(i in 1:nrow(centroides_dmq)){
   ) %>%
     mutate(name = paste0((range - 600) / 60," to ", range / 60, " mins"))
 
-  # Guardar poligonos en carpeta shp 
-  dsn <- paste0("data/shp/")
+  # Guardar poligonos en carpeta isocronas
+  dsn <- paste0("../data/shp/isocronas/")
+  
+  # Asignar un nombre a cada archivo shapefile
   layer <- centroides_dmq$zon[i]
   
   st_write(obj = isocrona,
@@ -110,10 +147,9 @@ for(i in 1:nrow(centroides_dmq)){
            driver = "ESRI Shapefile",
            append = TRUE)
  
-  # Add a 1 second pause to prevent overload
+  # Añadir una pausa de 1 segundo al crear los archivos para prevenir sobrecarga
   pause(1)
 }
-
 ```
 
 # Crear la matriz de influencia o captación
