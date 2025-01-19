@@ -155,128 +155,119 @@ for(i in 1:nrow(centroides_dmq)){
 ::: callout-note
 ## Objetivos de esta sección
 
-1.  Trazar las ubicaciones de los proveedores sobre las zonas de influencia.
-2.  Generar una matriz que identifice en qué subzona está localizada cada proveedor para cada zona censal.
+1.  Obtener las ubicaciones de los hospitales en el Distrito Metropolitano de Quito (DMQ)
+2.  Trazar las ubicaciones de los hospitales sobre las zonas de influencia.
+3.  Generar una matriz que identifique en qué subzona está localizada cada hospital para cada zona censal.
 :::
+
+## Obtener las ubicaciones de los hospitales en el DMQ
+
+Para obtener las ubicaciones de los hospitales realizamos una consulta a la API de OSM.
 
 ```{r}
 
-# Ubicación de hosptiales en DMQ
-
-hospitales_dmq <- getbb("Quito Ecuador") %>% 
+hospitales_sf <- 
+  # Obtenemos la zona de donde queremos consultar
+  getbb("Quito Ecuador") %>% 
+  
+  # Creamos la consulta 
   opq() %>% 
+  
+  # Especificamos las caracteristicas deseadas de OSM
   add_osm_feature(key = "amenity",
                   value = "hospital") %>% 
+  
+  # Especificamos el formato de salida de los datos como sf
   osmdata_sf()
 
-str(hospitales_dmq)
+# Visualizamos los datos obtenidos 
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron", 
+                   group = "Greyscale") %>% 
+  addPolygons(data = hospitales_sf$osm_polygons[1])
 
-hospitales_df <- hospitales_dmq$osm_polygons %>% 
+```
+
+Debido a que en algunos casos los puntos obtenidos apuntan a las esquinas de los hospitales vamos a obtener sus centroides.
+
+```{r}
+
+hospitales_centroides <- hospitales_sf$osm_polygons %>%
+  # Seleccionamos los nombres de los hospitales asi como su geomtria 
   select(name, geometry) %>% 
+  
+  # Obtenemos los centroides de los poligonos
   st_centroid() %>% 
+  
+  # Se omiten las filas sin nombre
   na.omit()
 
-st_write(hospitales_df, "hospitales.shp")
+# Visualizamos los hospitales en el DMQ
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron", 
+                   group = "Greyscale") %>% 
+  addCircleMarkers(data = hospitales_centroides)
 
-# Colocar los hospitales sobre las areas de interes (isocronas)
+# Exportamos los centroides obtenidos como shapefile
+# st_write(hospitales_centroides, "hospitales.shp")
+```
 
-shp_test <- st_read("data/shp/170150001.shp") #isocrona 
+## Trazar las ubicaciones de los hospitales sobre las zonas de influencia (isocronas)
 
-st_layers("data/shp/170150001.shp")
+```{r}
 
-# Lista -------------------------------------------------------------------
+# Importamos los hospitales 
+hospitales_shp <- st_read("../data/shp/hospitales.shp")
 
-isochrone_list <- "data/shp/"
+# Importamos un shapefile de ejemplo 
+isocrona_ejemplo <- st_read("../data/shp/isocronas/170150001.shp")
 
-shape.extension <- list.files(path = isochrone_list,
+# Sobreponemos los hospitales en los poligonos de cada isocrona
+interseccion <- st_join(hospitales_shp,
+                        isocrona_ejemplo, 
+                        # Hacemos una operacion de que nos devuelva un valor logico en lugar de usar una que cree nuevas geometrias como st_intersection() 
+                        join = st_within) 
+View(interseccion)
+
+```
+
+## Generar la matriz de influencia
+
+```{r}
+
+# Ruta donde se encuentran las isocronas
+isocronas_lista <- "../data/shp/isocronas/"
+
+# Ruta completa de cada isocrona
+isocrona_ruta <- list.files(path = isocronas_lista,
                               pattern = ".shp",
                               full.names = TRUE)
 
-shape.names <- list.files(path = isochrone_list,
-                          pattern = ".shp",
-                          full.names = FALSE) %>%
-  str_remove(".shp")
-
-# Creamos la matriz 
-
-matriz <- matrix(ncol = length(1),
-                 nrow = nrow(hospitales_df))
-
-colnames(matriz) <- shp_test
-rownames(matriz) <- hospitales_df$name
-
-
-head(matriz)
-
+# Creamos una lista vacia donde guardar nuestra operacion 
 lista <- list()
 
-for(i in 1:3){
+# Iteramos 
+for(i in seq_along(isocrona_ruta)){
   
-  iso <- st_read(shape.extension[i])
+  # Leer el shapefile i dentro de la carpeta isocronas
+  shapefile <- st_read(isocrona_ruta[i])
   
-  lista[[i]] <- st_join(hospitales_df,
-                        iso[2,], 
+  # Guardamos el resultado de la sobreposicion de los hospitales por cada shapefile en la lista 
+  lista[[i]] <- st_join(hospitales_shp,
+                        shapefile, 
                         join = st_within) %>% 
-    select(name.x, name.y) %>% 
+    
+    # Seleccionamos los nombres de los hospitales y rango temporal 
+    select(Hospital = name.x, name.y) %>% 
+    
+    # Nombramos las columnas segun el indice i 
     rename_with(.cols = name.y, 
                 .fn = ~paste0(.x, i)) %>% 
     as_tibble()
 }
 
-df <- reduce(lista, left_join)
-
-funcion_join <- function(iso, indice){
-  
-  iso <- st_read(iso)
-  
-  st_join(hospitales_df,
-          iso, 
-          join = st_within) %>% 
-    select(hospital = name.x, name.y) %>% 
-    group_by(hospital, geometry) %>% 
-    summarise(n = n_distinct(name.y),
-              n2 = sum(is.na(name.y))) %>%
-    mutate(n = n-n2) %>%
-    select(-n2) %>% 
-    rename_with(.cols = n,
-                .fn = ~paste0("shape_", indice)) %>%
-    as_tibble()
-}
-
-lista_2 <- map2(.x = shape.extension[1:10],
-                .y = 1:10,
-                funcion_join)
-
-lista_3 <- map2(.x = shape.extension[1:3], 
-                .y = 1:3, 
-                funcion_join,
-                fila = 2)
-
-df_2 <- reduce(lista_2, left_join)
-df_3 <- reduce(lista_3, left_join)
-
-a <- st_join(hospitales_df,
-             shp_test, 
-             join = st_within) %>% 
-  select(name.x, name.y)
-
-str(hospitales_df)
-
-
-for(i in 1:length(matriz)){
-  matriz[,i] <- st_intersects(hospitales_df,
-                                shp_test)$name
-}
-
-# Step 1: Check dimensions and types
-print(dim(hospitales_df))
-print(class(hospitales_df))
-print(dim(shp_test))
-print(class(shp_test))
-
-st_crs(hospitales_df) == st_crs(shp_test)
-
-length(hospitales_df) == length(shp_test)
+# Combinamos todos los elementos de la lista en un solo data frame usando un left_join
+ matriz <- reduce(lista, left_join)
 
 ```
 
