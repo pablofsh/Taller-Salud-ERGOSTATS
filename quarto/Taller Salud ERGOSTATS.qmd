@@ -231,7 +231,7 @@ View(interseccion)
 
 ```
 
-## Generar la matriz de influencia
+## Matriz de influencia de n isocronas
 
 ```{r}
 
@@ -245,6 +245,35 @@ isocrona_ruta <- list.files(path = isocronas_lista,
 
 # Creamos una lista vacia donde guardar nuestra operacion 
 lista <- list()
+
+# Iteramos 
+for(i in 1:10){
+  
+  # Leer el shapefile i dentro de la carpeta isocronas
+  shapefile <- st_read(isocrona_ruta[i])
+  
+  # Guardamos el resultado de la sobreposicion de los hospitales por cada shapefile en la lista 
+  lista[[i]] <- st_join(hospitales_shp,
+                        shapefile, 
+                        join = st_within) %>% 
+    
+    # Seleccionamos los nombres de los hospitales y rango temporal 
+    select(Hospital = name.x, name.y) %>% 
+    
+    # Nombramos las columnas segun el indice i 
+    rename_with(.cols = name.y, 
+                .fn = ~paste0(.x, i)) %>% 
+    as_tibble()
+}
+  
+# Combinamos todos los elementos de la lista en un solo data frame usando un left_join
+ matriz <- reduce(lista, left_join)
+```
+
+## Generar la matriz de influencia completa
+
+```{r}
+#| include: false
 
 # Iteramos 
 for(i in seq_along(isocrona_ruta)){
@@ -273,6 +302,52 @@ for(i in seq_along(isocrona_ruta)){
 
 # Crear la matriz de ponderaciones o pesos
 
+```{r}
+
+# Funcion gausiana (impedancia)
+impedancia <- function(mintiempo, subzonatiempo, maxtiempo){
+  beta <- -((maxtiempo-mintiempo)^2)/log(0.01)
+  peso <- exp(-(subzonatiempo-mintiempo)^2/beta)
+  peso <- round(peso, 2)
+  return(peso)
+}
+
+
+# Crear pesos para la matriz de pesos
+peso_NA <- 0
+peso_10 <- impedancia(mintiempo = 5, subzonatiempo =  5, maxtiempo = 20)
+peso_20 <- impedancia(mintiempo = 5, subzonatiempo = 15, maxtiempo = 20)
+
+```
+
+## Llenar la matriz
+
+```{r}
+
+# Definir los nombres de las subzonas en la matriz de pesos
+sub1 <- "0 to 10 mins"
+sub2 <- "10 to 20 mins"
+
+# Llenar la matriz
+interseccion <- interseccion %>% 
+  mutate(pesos = case_when(
+    name.y == sub1 ~ peso_10,
+    name.y == sub2 ~ peso_20,
+    is.na(name.y) ~ peso_NA
+  ))
+
+# Asegurarse de que los valores sean numeric 
+class(interseccion$pesos) <- "numeric"
+```
+
 # Medidas de la oferta y la demanda
+
+::: callout-note
+# Objetivos de esta sección
+
+1.  Obtener los centroides para cada una de las zonas censales (unidades geográficas).
+
+2.  Crear las isócronas para cada zona censal con zonas de influencia de 0-10 min y de 10-20 min.
+:::
 
 # Calcular el Índice de acceso espacial
