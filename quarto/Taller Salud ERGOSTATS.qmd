@@ -7,6 +7,8 @@ execute:
   eval: false
 ---
 
+# Introducción
+
 # Sección 1: Crear las zonas de influencia o captación
 
 ::: callout-note
@@ -31,10 +33,8 @@ pacman::p_load(
   sf,           # Manipulación de datos espaciales
   tidyverse,    # Manipulación de datos 
   leaflet,      # Crear mapas interactivos
-  profvis,
   hereR,        # Paquete para acceder a la API HERE 
-  osmdata,
-  sp
+  osmdata       # Paquete para descargar datos de OpenStreetMaps (OSM)
 )
 
 # Importar datos
@@ -47,14 +47,6 @@ mapa_base_dmq <- st_read(ruta,
 ## Transformacion de los datos
 
 ```{r}
-
-# Crear una poblacion aleatoria para cada zona censal
-set.seed(123)
-
-mapa_base_dmq <- mapa_base_dmq %>% 
-  mutate(poblacion = sample(1000:10000, 
-                            n(), 
-                            replace = TRUE))
 
 # Obtener los centroides de cada zona censal
 centroides_dmq <- st_centroid(mapa_base_dmq) %>% 
@@ -104,14 +96,20 @@ iso <- isoline(
 iso_vis <- as(iso, "Spatial")
 
 # Visualizar las isocronas
-leaflet() %>% 
+isocronas_sector_censal <- leaflet() %>% 
   # Añadir mapa base 
   addProviderTiles("CartoDB.Positron", 
                    group="Greyscale") %>% 
   
   # Añadir las isocronas
-  addPolygons(data = iso)
+  addPolygons(data = iso, 
+              color = c("yellow", "blue")) %>% 
+  
+  # Añadir el sector censal
+  addCircleMarkers(data = centroides_dmq[1,], 
+                   color = "green")
 
+isocronas_sector_censal
 ```
 
 ### Crear isocronas por cada centroide
@@ -220,14 +218,28 @@ leaflet() %>%
 hospitales_shp <- st_read("../data/shp/hospitales.shp")
 
 # Importamos un shapefile de ejemplo 
-isocrona_ejemplo <- st_read("../data/shp/isocronas/170150001.shp")
+isocrona_ejemplo <- st_read("../data/shp/isocronas/170150069.shp")
 
-# Sobreponemos los hospitales en los poligonos de cada isocrona
-interseccion <- st_join(hospitales_shp,
+interseccion <- st_join(hospitales_shp, 
                         isocrona_ejemplo, 
-                        # Hacemos una operacion de que nos devuelva un valor logico en lugar de usar una que cree nuevas geometrias como st_intersection() 
-                        join = st_within) 
+                        # Hacemos una operacion de que nos devuelva un valor logico en lugar de usar una que cree nuevas geometrias como st_intersection()
+                        join = st_within) %>%
+  
+  # Agrupar por identificador de hospital
+  group_by(name.x) %>%  
+  
+  # Añadir solo un hospital por cada isocrona
+  slice_min(order_by = name.y, n = 1, with_ties = FALSE) %>%  
+  ungroup() %>% 
+  rename(Hospitales = name.x, "170150069" = name.y)
+
 View(interseccion)
+
+interseccion_vis <- na.omit(interseccion)
+
+# Agregamos los los hospitales sobre las isocronas del sector censal N 
+isocronas_sector_censal %>% 
+  addCircleMarkers(data = interseccion_vis, color = "red")
 
 ```
 
@@ -243,6 +255,12 @@ isocrona_ruta <- list.files(path = isocronas_lista,
                               pattern = ".shp",
                               full.names = TRUE)
 
+# Nombres de cada sector censal para cada isocrona
+shape.names <- list.files(path = isocronas_lista,
+                          pattern = ".shp",
+                          full.names = FALSE) %>%
+  str_remove(".shp")
+
 # Creamos una lista vacia donde guardar nuestra operacion 
 lista <- list()
 
@@ -257,17 +275,24 @@ for(i in 1:10){
                         shapefile, 
                         join = st_within) %>% 
     
+    # Agrupar por identificador de hospital
+    group_by(name.x) %>%  
+    
+    # Selccionamos solo un hospital por cada isocrona 
+    slice_min(order_by = name.y, n = 1, with_ties = FALSE) %>%  
+    ungroup() %>% 
+    
     # Seleccionamos los nombres de los hospitales y rango temporal 
     select(Hospital = name.x, name.y) %>% 
     
     # Nombramos las columnas segun el indice i 
     rename_with(.cols = name.y, 
-                .fn = ~paste0(.x, i)) %>% 
+                .fn = ~shape.names[i]) %>% 
     as_tibble()
 }
   
 # Combinamos todos los elementos de la lista en un solo data frame usando un left_join
- matriz <- reduce(lista, left_join)
+matriz <- reduce(lista, left_join)
 ```
 
 ## Generar la matriz de influencia completa
@@ -286,21 +311,40 @@ for(i in seq_along(isocrona_ruta)){
                         shapefile, 
                         join = st_within) %>% 
     
+    # Agrupar por identificador de hospital
+    group_by(name.x) %>%  
+    
+    # Selccionamos solo un hospital por cada isocrona 
+    slice_min(order_by = name.y, n = 1, with_ties = FALSE) %>%  
+    ungroup() %>% 
+    
     # Seleccionamos los nombres de los hospitales y rango temporal 
     select(Hospital = name.x, name.y) %>% 
     
     # Nombramos las columnas segun el indice i 
     rename_with(.cols = name.y, 
-                .fn = ~paste0(.x, i)) %>% 
+                .fn = ~shape.names[i]) %>% 
     as_tibble()
 }
 
 # Combinamos todos los elementos de la lista en un solo data frame usando un left_join
- matriz <- reduce(lista, left_join)
+matriz_completa <- reduce(lista, left_join)
 
 ```
 
-# Crear la matriz de ponderaciones o pesos
+# Sección 3: Crear la matriz de ponderaciones o pesos
+
+::: callout-note
+# Objetivos de esta sección
+
+1.  Definir la función de distancia (impedancia) para obtener los pesos de cada isocrona.
+
+2.  Rellenar la matriz con los valores de oferta, demanda y los pesos correspondientes según el tiempo de viaje.
+:::
+
+## Función de distancia (impedancia)
+
+Creamos la función de impedancia para asignar los pesos correspondientes a los hospitales en base a la distancia.
 
 ```{r}
 
@@ -312,42 +356,160 @@ impedancia <- function(mintiempo, subzonatiempo, maxtiempo){
   return(peso)
 }
 
-
 # Crear pesos para la matriz de pesos
 peso_NA <- 0
 peso_10 <- impedancia(mintiempo = 5, subzonatiempo =  5, maxtiempo = 20)
 peso_20 <- impedancia(mintiempo = 5, subzonatiempo = 15, maxtiempo = 20)
 
-```
-
-## Llenar la matriz
-
-```{r}
-
 # Definir los nombres de las subzonas en la matriz de pesos
 sub1 <- "0 to 10 mins"
 sub2 <- "10 to 20 mins"
 
-# Llenar la matriz
-interseccion <- interseccion %>% 
-  mutate(pesos = case_when(
-    name.y == sub1 ~ peso_10,
-    name.y == sub2 ~ peso_20,
-    is.na(name.y) ~ peso_NA
-  ))
-
-# Asegurarse de que los valores sean numeric 
-class(interseccion$pesos) <- "numeric"
 ```
 
-# Medidas de la oferta y la demanda
+## Medidas de la oferta y la demanda
+
+Añadimos a la matriz los valores de los médicos disponibles por cada hospital (oferta) y de la población en cada sector censal (demanda).
+
+```{r}
+
+# Se reordena la matriz en formato longer para realizar calculos en grupo
+tabla <- matriz_completa %>% 
+  pivot_longer(
+    
+    # Los nombres de las columnas son los siguientes:
+    cols = matches("17"),
+    
+    # Estos nombres van a ir a la nueva columna "sector_censal"
+    names_to = "sector_censal",
+    
+    # Las isocronas en las que se encuentra cada sector censal va a
+    values_to = "isocronas") %>% 
+  
+  arrange(sector_censal, Hospital)
+
+# Creamos un dataframe con datos demograficos (poblacion) para cada sector censal
+datos_demo <- tabla %>%
+  # Dame todos los valores unicos en la columna  
+  distinct(sector_censal) %>% 
+  
+  # Agrega una nueva columna de poblacion
+  mutate(poblacion = runif(n(),100, 200)) 
+
+# Creamos un dataframe con numero de doctores (oferta) para cada hospital
+datos_doctor <- tabla %>% 
+  distinct(Hospital) %>% 
+  mutate(doctores = runif(n(),10, 20))
+
+```
+
+## Llenar la matriz
+
+Llenamos la matriz con los valores de oferta, demanda y los pesos correspondientes según el tiempo de viaje.
+
+```{r}
+
+lista <- tabla %>% 
+  
+  # Divide la tabla en una lista de dataframes por sector censal  
+  split(.$sector_censal) %>% 
+  
+  # Aplica a cada dataframe de la lista la funcion left_join para unir los datos de:
+  map(~ {.x %>% 
+        
+        # Poblacion
+        left_join(datos_demo) %>% 
+        
+        # Doctores 
+        left_join(datos_doctor) %>% 
+      
+      # Asigna los pesos segun la isocrona en la que se encuentra cada hospital para un sector censal en especifico  
+      mutate(peso = case_when( 
+        isocronas == sub1 ~ peso_10,
+        isocronas == sub2 ~ peso_10,
+        TRUE ~ peso_NA 
+        ))
+    })
+```
+
+# Sección 4: Calcular el Índice de acceso espacial y el Coeficiente de acceso espacial
 
 ::: callout-note
 # Objetivos de esta sección
 
-1.  Obtener los centroides para cada una de las zonas censales (unidades geográficas).
+1.  Calcular el índice de acceso espacial (IAE).
 
-2.  Crear las isócronas para cada zona censal con zonas de influencia de 0-10 min y de 10-20 min.
+2.  Calcular el coeficiente de acceso espacial (CAE).
 :::
 
-# Calcular el Índice de acceso espacial
+## Índice de acceso espacial (IAE)
+
+Este valor se genera para cada uno de los sectores censales y puede interpretarse como que cuanto mayor sea la puntuación, más acceso tiene ese sector censal a un proveedor de salud.
+
+```{r}
+iae_df <- lista %>% 
+  # Por cada elemento de la lista 
+  map(~{.x %>%
+      
+      # Multiplicar la poblacion de cada sector censal por su peso correspondiente
+      mutate(poblacion_ponderada = poblacion * peso) %>% 
+      
+      # Dividir el numero de doctores por la poblacion ponderada para obtener el supply-demand ratio
+      mutate(razon_proveedor_poblacion = doctores / poblacion_ponderada) %>% 
+      
+      # Operacion 1 del Indice de Acceso Espacial: Multiplicar el supply-demand ratio por los pesos
+      mutate(multiplicacion = razon_proveedor_poblacion * peso) %>% 
+      group_by(sector_censal) %>% 
+      summarise(
+        
+        # Operacion 2 del Indice de Acceso Espacial: Sumar todos estos resultados 
+        indice_acceso_espacial = sum(!is.na(multiplicacion), na.rm = T))
+  }) %>% 
+  bind_rows()
+```
+
+## Coeficiente de acceso espacial (CAE)
+
+Sin embargo, el valor del IAE es difícil de interpretar y, en cierto modo, carece de sentido si no se conoce la distribución completa de los valores en la región. Para resolver ambos problemas, el siguiente paso de este análisis es calcular un Coeficiente de Acceso Espacial (CAE), que normaliza los valores IAE dividiéndolos por el valor IAE medio de toda la región.
+
+Un valor CAE de exactamente 1 significa que esa unidad geográfica tiene exactamente el acceso medio a un proveedor de asistencia sanitaria para esa región. Las unidades geográficas con un CAE superior a 1 tienen un acceso mayor que la media regional y las unidades geográficas con valores CAE inferiores a 1 tienen un acceso menor que la media regional.
+
+Los valores CAE también indican el rango, de modo que si un sector censal tiene un CAE más alto que otro sector censal, entonces el sector censal con el valor CAE más alto tiene mayor acceso a un proveedor médico.
+
+```{r}
+iae_df <- iae_df %>% 
+  mutate(
+    coeficiente_acceso_espacial = indice_acceso_espacial / mean(indice_acceso_espacial))
+```
+
+## Visualización de datos
+
+En el data frame que obtuvimos no podemos graficarlo porque no contamos con la geometría de cada sector censal.
+
+```{r}
+
+# Agreamos la información de las geometrías a nuestro data frame 
+iae_sf <- mapa_base_dmq %>% 
+  left_join(iae_df, by = c("zon" = "sector_censal")) %>% 
+  st_transform(4326) %>% 
+  select(zon:geom) %>% 
+  rename(sector_censal = zon) %>% 
+  na.omit()
+
+# Creamos una paleta de colores para el IAE
+palette <- colorNumeric(palette = "viridis",
+                        domain = iae_sf$indice_acceso_espacial)
+
+# Visualizamos el IAE para el DMQ segun sus sectores censales
+
+iae_sf %>% 
+leaflet() %>% 
+  addTiles() %>% 
+  addPolygons(fillColor = ~palette(indice_acceso_espacial), 
+              popup = paste0(
+                round(iae_sf$indice_acceso_espacial,2))) %>% 
+  addLegend("topright",
+            pal = palette,
+            values = ~indice_acceso_espacial,
+            opacity = 1)
+```
