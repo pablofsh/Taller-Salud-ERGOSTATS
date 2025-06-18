@@ -468,6 +468,10 @@ iae_df <-  lista %>%
   bind_rows()
 ```
 
+$$
+R_i = \frac{Di}{\sum_{j=1}^{N}{Pj\times W_j}}
+$$
+
 ## Coeficiente de acceso espacial (CAE)
 
 Sin embargo, el valor del IAE es difícil de interpretar y, en cierto modo, carece de sentido si no se conoce la distribución completa de los valores en la región. Para resolver ambos problemas, el siguiente paso de este análisis es calcular un Coeficiente de Acceso Espacial (CAE), que normaliza los valores IAE dividiéndolos por el valor IAE medio de toda la región.

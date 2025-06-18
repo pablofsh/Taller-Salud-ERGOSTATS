@@ -1,0 +1,24 @@
+/* Fuente Roboto desde Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+
+.reveal {
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Escala de colores para títulos */
+.reveal h1 {
+  color: #800000; /* rojo oscuro */
+}
+.reveal h2 {
+  color: #b22222; /* firebrick */
+}
+.reveal h3 {
+  color: #cc5500; /* naranja quemado */
+}
+.reveal h4 {
+  color: #e25822; /* naranja oscuro */
+}
+
+.reveal .slide-logo {
+   max-height: 1em !important;
+}
