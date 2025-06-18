@@ -1,0 +1,4 @@
+- source: Presentacion-Borrador.qmd
+  quarto-pub:
+    - id: 68d72e13-4dc9-44d9-93d9-c3161be11abd
+      url: https://alexvbr.quarto.pub/accesibility-index

@@ -42,6 +42,12 @@ ruta <- "../data/gpkg/base_map_dmq.gpkg"
 mapa_base_dmq <- st_read(ruta,
                          layer = "dmq")
 
+# Condicional para el procesamiento, dado que no queremos reconstruir los elementos cada vez que renderisamos el archivo
+# if(!file.exists("data/gpkg/base_map_dmq.gpkg")){
+#   source("procesamiento.R")
+# }
+
+
 ```
 
 ## Transformacion de los datos
@@ -235,7 +241,9 @@ interseccion <- st_join(hospitales_shp,
 
 View(interseccion)
 
+# Na Omit te devuelve un objeto de tipo "na_omit" que no necesariamente es data.frame
 interseccion_vis <- na.omit(interseccion)
+# filter(if_any(everything(), ~!is.na(.x))) # Esto conserva el formato tibble o df, sin hacerle na.omit
 
 # Agregamos los los hospitales sobre las isocronas del sector censal N 
 isocronas_sector_censal %>% 
