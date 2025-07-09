@@ -9,7 +9,7 @@ library(leaflet)      # Crear mapas interactivos
 
 # Importar datos ----------------------------------------------------------
 
-ruta <- "../data/gpkg/base_map_dmq.gpkg"
+ruta <- "data/gpkg/base_map_dmq.gpkg"
 mapa_base_dmq <- st_read(ruta,
                          layer = "dmq")
 
@@ -103,7 +103,7 @@ hospitales_centroides <- hospitales_sf$osm_polygons %>%
 
 
 # Ruta donde se encuentran las isocronas
-isocronas_lista <- "../data/shp/isocronas/"
+isocronas_lista <- "data/shp/isocronas/"
 
 # Ruta completa de cada isocrona
 isocrona_ruta <- list.files(path = isocronas_lista,
@@ -150,6 +150,12 @@ for(i in seq_along(isocrona_ruta)){
 matriz_completa <- reduce(lista, left_join)
 
 
+st_write(matriz_completa, 
+           dsn = "data/gpkg/matriz_influencia.gpkg",
+           layer = "matriz_influencia",
+           driver = "GPKG",
+           delete_dsn = TRUE)
+
 # Crear la función de impedancia ------------------------------------------
 
 # Funcion gausiana (impedancia)
@@ -170,5 +176,112 @@ sub1 <- "0 to 10 mins"
 sub2 <- "10 to 20 mins"
 
 
+tabla <- matriz_completa %>% 
+  pivot_longer(
+    
+    # Los nombres de las columnas son los siguientes:
+    cols = matches("17"),
+    
+    # Estos nombres van a ir a la nueva columna "sector_censal"
+    names_to = "sector_censal",
+    
+    # Las isocronas en las que se encuentra cada sector censal va a
+    values_to = "isocronas") %>% 
+  
+  arrange(sector_censal, Hospital)
+
+# Creamos un dataframe con datos demograficos (poblacion) para cada sector censal
+datos_demo <- tabla %>%
+  # Dame todos los valores unicos en la columna  
+  distinct(sector_censal) %>% 
+  
+  # Agrega una nueva columna de poblacion
+  mutate(poblacion = runif(n(),100, 200)) 
+
+# Creamos un dataframe con numero de doctores (oferta) para cada hospital
+datos_doctor <- tabla %>% 
+  distinct(Hospital) %>% 
+  mutate(doctores = runif(n(),10, 20))
 
 
+lista <- tabla %>% 
+  
+  # Divide la tabla en una lista de dataframes por sector censal  
+  split(.$sector_censal) %>% 
+  
+  # Aplica a cada dataframe de la lista la funcion left_join para unir los datos de:
+  map(~ {.x %>% 
+      
+      # Poblacion
+      left_join(datos_demo) %>% 
+      
+      # Doctores 
+      left_join(datos_doctor) %>% 
+      
+      # Asigna los pesos segun la isocrona en la que se encuentra cada hospital para un sector censal en especifico  
+      mutate(peso = case_when( 
+        isocronas == sub1 ~ peso_10,
+        isocronas == sub2 ~ peso_20,
+        TRUE ~ peso_NA 
+      ))
+  })
+
+
+iae_df <-  lista %>% 
+  # Por cada elemento de la lista 
+  map(~{.x %>%
+      
+      # Multiplicar la poblacion de cada sector censal por su peso correspondiente
+      mutate(poblacion_ponderada = poblacion * peso) %>% 
+      
+      # Dividir el numero de doctores por la poblacion ponderada para obtener el supply-demand ratio
+      mutate(razon_proveedor_poblacion = doctores /sum(poblacion_ponderada, na.rm = TRUE)) %>% 
+      mutate(multiplicacion = razon_proveedor_poblacion * peso)  %>% 
+      group_by(sector_censal) %>% 
+      summarise(
+        
+        # Operacion 2 del Indice de Acceso Espacial: Sumar todos estos resultados 
+        indice_acceso_espacial = sum(multiplicacion, na.rm = T))
+  }) %>% 
+  bind_rows()
+
+
+
+# Agreamos la información de las geometrías a nuestro data frame 
+iae_sf <- mapa_base_dmq %>% 
+  left_join(iae_df, by = c("zon" = "sector_censal")) %>% 
+  st_transform(4326) %>% 
+  select(zon:geom) %>% 
+  rename(sector_censal = zon) %>% 
+  na.omit()
+
+# Creamos una paleta de colores para el IAE
+palette <- colorNumeric(palette = "viridis",
+                        domain = iae_sf$indice_acceso_espacial)
+
+# Visualizamos el IAE para el DMQ segun sus sectores censales
+
+st_write(iae_sf, 
+           dsn = "data/gpkg/iae_dmq.gpkg",
+           layer = "iae_dmq",
+           driver = "GPKG",
+           delete_dsn = TRUE)
+
+iae_sf %>% 
+  ggplot() +
+  geom_sf(aes(fill = indice_acceso_espacial)) +
+  scale_fill_viridis_c() +
+  labs(title = "Indice de Acceso Espacial (IAE) en el DMQ",
+       fill = "IAE") +
+  theme_minimal()
+
+iae_sf %>% 
+  leaflet() %>% 
+  addTiles() %>% 
+  addPolygons(fillColor = ~palette(indice_acceso_espacial), 
+              popup = paste0(
+                round(iae_sf$indice_acceso_espacial,2))) %>% 
+  addLegend("topright",
+            pal = palette,
+            values = ~indice_acceso_espacial,
+            opacity = 1)

@@ -1,0 +1,475 @@
+---
+title: "Fortaleciendo el análisis espacial de acceso a salud"
+subtitle: "De los datos al diagnóstico y la acción"
+author: 
+  - "Pablo Sarango"
+  - "Alex Bajaña"
+format: 
+  revealjs:
+    logo: ergos--02.png
+    css: estilos.css
+    title-slide-attributes:
+      data-background-image: grafi.png
+      data-background-size: expand
+      data-background-opacity: "0.5"
+    width: 1280
+    height: 720
+    slide-number: true
+    theme: solarized
+editor: visual
+execute: 
+  eval: false
+  echo: true
+---
+
+
+## El Centro de Investigación Estadística ERGOSTATS 
+
+### Misión de ERGOSTATS:
+
+Fundé ERGOSTATS con la misión de construir una comunidad en torno a las tecnologías Open Source, impulsando una sociedad orientada por datos.
+
+### ¿Por qué el análisis de datos?
+
+El análisis de datos y su aplicación deben ser derechos universales, no un privilegio. La educación en análisis de datos ayuda a entender problemas desde su raíz y a tomar decisiones informadas.
+
+### ¿Que nos espera en 2025?
+
+Nuestra visión para 2025 es fortalecer esta comunidad, promoviendo un marco ético y comunitario donde el análisis de datos sea accesible y fomente el desarrollo.
+
+## Actividades de ERGOSTATS en 2024 
+
+-   [3]{style="font-size: 1.5em; font-weight: bold; color: #800080; "} cursos realizados
+-   [4]{style="font-size: 1.5em; font-weight: bold; color: #800080; "} webinars impartidos
+-   [3]{style="font-size: 1.5em; font-weight: bold; color: #800080;"} taller de capacitación interna
+-   [+50]{style="font-size: 1.5em; font-weight: bold; color: #800080;"} publicaciones de carácter estadístico y de divulgación
+
+Colaboraciones importantes:
+
+-   Escuela Pólitecnica Nacional
+-   Prefectura de la provincia de Manabí
+-   Red Ecuatoriana de Ciencia Regional
+
+# Agenda
+
+## Tres puntos para la colaboración interinstitucional:
+
+1.  📍 Indicador de accesibilidad a los servicios de salud, "Una crítica a la configuración del SNS"
+2.   🌐 El Sistema Integrado de Indicadores Espaciales de la EPN "Acercando los datos a la academia"
+3.   🎓 ERGOSTATS Academia "Capacitación con contenido relevante en colaboración con INEC"
+
+# Indicador de accesibilidad a los servicios de salud
+
+Propuesta de investigación colaborativa
+
+## Sobre la importancia del acceso a la salud
+
+"The capability to avoid premature mortality, or to escape preventable morbidity, is a basic part of the freedom that we have reason to value." — *Amartya Sen, Development as Freedom (1999), p. 36*
+
+"Resulta indispensable mejorar el funcionamiento y gestión de las instituciones públicas del sector de salud de manera que respondan a las necesidades clínicas y no clínicas de la población. La correcta implementación del Modelo de Atención Integral en Salud y particularmente, de la Red Pública Integral a nivel nacional y local es prioritaria para delinear la correcta oferta de servicios en el primer, segundo y tercer nivel de atención."
+
+— *Código Orgánico de la Salud, 2016*
+
+## El SNS
+
+En Ecuador, el Sistema Nacional de Salud (SNS) se organiza en tres niveles de atención:
+
+-   Primer nivel: Principalmente centros de salud
+-   Segundo nivel: Centros de especialidades
+-   Tercer nivel: Unidades de alta especilidad
+
+> Entre los niveles 1 y 2, se atienden el 95% de problemas sanitarios del país.
+
+## **📊 La organización territorial del SNS**
+
+-   El Sistema Nacional de Salud (SNS) en Ecuador se estructura sobre la base de **zonas, distritos y circuitos** de salud, bajo el principio de **atención integral y territorializada**.
+
+-   Sin embargo, en la práctica, la **disponibilidad y distribución de los servicios especializados** sigue siendo desigual entre áreas urbanas, periurbanas y rurales.
+
+-   A pesar de avances, más del **30 % de la población rural** enfrenta dificultades para acceder a servicios de salud oportuna y resolutiva (INEC, 2021).
+
+    > 🔍 *¿Realmente todos acceden a los servicios que necesitan, cuando y donde los necesitan?*
+
+## **🌐 Desigualdades territoriales y accesibilidad**
+
+\
+📉 *Acceso ≠ Presencia física del establecimiento*
+
+-   Tener un centro de salud cercano **no garantiza el acceso efectivo**: importa la oferta de servicios, el tiempo de desplazamiento, la congestión y la capacidad resolutiva.
+
+-   En provincias como Morona Santiago o Esmeraldas, los tiempos promedio de traslado superan los **60 minutos** para acceder al segundo nivel de atención (MSP, 2023).
+
+    > 📍 *Medir dónde están los servicios ya no es suficiente: necesitamos saber quiénes realmente pueden llegar a ellos.*
+
+
+## Alternativas {.scrollable .smaller}
+
+| Método | Descripción | Ventajas | Limitaciones |
+|------------------|------------------|------------------|------------------|
+| **1. PAI (Provider-to-Area Ratio)** | Razón simple entre número de proveedores en un área y la población en esa misma área. | Muy fácil de calcular. | Ignora distancia, movilidad y oferta externa. |
+| **2. Gravity Model** | Calcula la accesibilidad ponderando oferta y demanda según distancia o tiempo, usando una función de impedancia. | Considera distancia y competencia por servicios. | Requiere calibración del parámetro de distancia. |
+| **3. Two-Step Floating Catchment Area (2SFCA)** | Evalúa cobertura considerando relaciones entre proveedores y población dentro de áreas de captación (buffers). | Balancea oferta y demanda local. Sencillo y flexible. | Usa límites binarios de accesibilidad (dentro/fuera del buffer). |
+| **4. Enhanced 2SFCA (E2SFCA)** | Variante del 2SFCA que introduce un **decay function** para ponderar la accesibilidad según distancia dentro del área de captación. | Más realista al modelar caída del acceso con la distancia. | Requiere elegir forma y parámetros del decaimiento. |
+| **5. Modified 2SFCA (M2SFCA)** | Integra mejoras como buffers múltiples, congestión por demanda y tipos de servicios diferenciados. | Aumenta precisión y especificidad. | Más complejo de implementar. |
+| **6. Kernel Density 2SFCA (KD2SFCA)** | Sustituye buffers fijos por una función kernel (suavizado) que modela la influencia de los proveedores de forma continua. | Más fiel a los patrones reales de accesibilidad. | Alta carga computacional y parámetros a calibrar. |
+
+## Un método para el SNS
+
+El método E2SFCA (Enhanced Two-Step Floating Catchment Area) es una herramienta geoespacial avanzada que permite evaluar la accesibilidad espacial a servicios de salud.
+
+> -   La **política pública necesita herramientas para identificar brechas reales de acceso** y tomar decisiones informadas sobre asignación de recursos, planificación y mejora del sistema.
+>
+> -   **Identificación precisa de áreas con acceso limitado a atención primaria:** El E2SFCA permite detectar zonas donde la población tiene dificultades para acceder a servicios de salud de primer nivel, considerando tanto la disponibilidad de profesionales como la distancia geográfica.
+
+## ¿Por qué aplicar el método E2SFCA en Ecuador?
+
+-   **Consideración del efecto de la distancia en el acceso a servicios:** Este método incorpora el concepto de "decadencia de distancia", reconociendo que la probabilidad de utilizar un servicio disminuye a medida que aumenta la distancia o el tiempo de viaje.
+
+-   **Apoyo a la planificación y distribución equitativa de recursos:** Al identificar áreas con baja accesibilidad, las autoridades pueden tomar decisiones informadas sobre la ubicación de nuevos centros de salud o la asignación de recursos, promoviendo la equidad en el acceso a la atención médica.
+
+## ¿Por qué aplicar el método E2SFCA en Ecuador?
+
+-   **Evaluación de la efectividad de políticas de salud:** El E2SFCA puede utilizarse para monitorear y evaluar el impacto de intervenciones y políticas destinadas a mejorar la accesibilidad a servicios de salud en diferentes regiones.
+
+-   **Facilitación de análisis comparativos entre regiones:** Permite comparar la accesibilidad a servicios de salud entre diferentes áreas geográficas, identificando disparidades y orientando estrategias de mejora.
+
+## Mapa de Quito
+
+```{r eval=TRUE, echo = FALSE}
+
+
+library(tidyverse)
+library(sf)
+
+# Cargar y preparar los datos de zonas censales
+zonas <- st_read("../data/GEODATABASE_NACIONAL_2021/GEODATABASE_NACIONAL_2021.gdb/", layer = "zon_a", quiet = TRUE) %>% 
+  st_as_sf()
+
+dmq_zonas <- zonas %>% dplyr::filter(str_detect(zon, "^170150"))
+
+centroides_dmq <- st_centroid(dmq_zonas) %>% 
+  st_transform(4326)
+
+
+
+dmq_zonas %>% 
+  ggplot() +
+  geom_sf(fill = "darkblue",alpha = 0.2) +
+  geom_sf(data = centroides_dmq, size = 0.5, color = "red") +
+  theme_minimal() +
+  labs(title = "Zonas Censales del Distrito Metropolitano de Quito",
+       subtitle = "Fuente: GEODATABASE NACIONAL 2021")
+```
+
+
+
+## Isocrona para una zona censal
+
+```{r echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE}
+
+
+isocrona <- st_read("../data/shp/isocronas/170150010.shp", quiet = TRUE)
+
+target <- dmq_zonas %>% 
+  filter(str_detect(zon, "^170150010") )
+
+isocrona %>% 
+  ggplot() +
+  geom_sf(data = dmq_zonas, fill = "grey") + 
+  geom_sf(aes(fill = name), alpha = 0.2) +
+  geom_sf(data = target, fill = "darkblue", alpha = 0.5) +
+  theme_minimal() +
+  theme(legend.position = "bottom", 
+        legend.title = element_blank()) +
+  labs(title = "Isocrona para el zona censal 170150010",
+       caption = "Fuente: HERE API")
+  
+
+```
+## Obtener las ubicaciones de los hospitales en el DMQ
+
+Para obtener las ubicaciones de los hospitales realizamos una consulta a la API de OSM.
+
+```{r echo=FALSE, eval=FALSE, message=FALSE, warning=FALSE}
+
+hospitales_sf <- 
+  # Obtenemos la zona de donde queremos consultar
+  getbb("Quito Ecuador") %>% 
+  
+  # Creamos la consulta 
+  opq() %>% 
+  
+  # Especificamos las caracteristicas deseadas de OSM
+  add_osm_feature(key = "amenity",
+                  value = "hospital") %>% 
+  
+  # Especificamos el formato de salida de los datos como sf
+  osmdata_sf()
+```
+
+> Aqui tenemos la primera dificultad técnica. OSM es de carácter público y colaborativo, no dispone de actualizaciones ni contempla la totalidad del SNS. Por otro lado con esta fuente no se puede estimar la oferta de médicos. 
+
+## Hospitales del DMQ
+
+```{r echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE}
+
+hospitales <- st_read("../data/shp/hospitales.shp", quiet = TRUE)
+
+
+dmq_zonas %>% 
+  ggplot() +
+  geom_sf(fill = "gray", alpha = 0.2) +
+  geom_sf(data = hospitales, color = "darkblue", size = 2) +
+  theme_minimal() +
+  labs(title = "Hospitales en el Distrito Metropolitano de Quito",
+       caption = "Fuente: OpenStreetMap") 
+
+```
+
+## Visualizar la matriz de influencia {.scrollable .smaller}
+
+```{r echo=FALSE, eval=TRUE}
+# Visualizar la matriz de influencia
+
+matriz_completa <- st_read("../data/gpkg/matriz_influencia.gpkg",
+                            layer = "matriz_influencia")
+
+matriz_completa %>% 
+  as_tibble() %>% 
+  select(-geom) %>% 
+  slice(1:10) %>% 
+  select(1:10) %>% 
+  gt::gt() %>% 
+  gt::tab_header(
+    title = "Matriz de influencia de hospitales en el DMQ",
+    subtitle = "Primeras 10 filas y columnas"
+  ) 
+```
+
+## Insumos por construir
+
+### Matriz de ponderaciones o pesos
+
+Buscamos explicar cómo asignar importancia relativa a distintos elementos de la red o territorio analizado.
+
+
+## Función de distancia (impedancia)
+
+Crear la función de impedancia para asignar los pesos correspondientes a los hospitales en base a la distancia.
+
+> **Muy importante:** Identificación de todas las unidades de salud -> Georreferenciación -> Integración de objetos espaciales al Registro Administrativo.
+
+## Índice de acceso espacial (IAE)
+
+### Paso 1
+Para cada ubicación de médicos $j$, se buscan todas las ubicaciones de población $k$ que se encuentren dentro de un tiempo de viaje umbral ($d_0$) desde la ubicación $j$ (es decir, esta es el área de captación de la ubicación $j$), y se calcula la razón médico-población $R_j$ dentro del área de captación:
+
+$$
+R_j = \frac{S_j}{\sum_{k \in \{d_{kj} \leq d_0\}} P_k}
+$$
+
+## Índice de acceso espacial (IAE)
+
+donde:\
+
+-   $P_k$ es la población en la ubicación $k$ cuyo centroide cae dentro del área de captación $j$ ($d_{kj} \leq d_0$),\
+-   $S_j$ es el número de médicos en la ubicación $j$,\
+-   $d_{kj}$ es el tiempo de viaje entre $k$ y $j$.
+
+## Índice de acceso espacial (IAE)
+
+### Paso 2:
+
+Para cada ubicación de población $i$, se buscan todas las ubicaciones de médicos $j$ que se encuentren dentro del tiempo de viaje umbral ($d_0$) desde la ubicación $i$ (es decir, esta es el área de captación del punto de población $i$), y se suman las razones médico-población $R_j$ (calculadas en el paso 1) en esas ubicaciones:
+
+$$
+A_i^F = \sum_{j \in \{d_{ij} \leq d_0\}} R_j = \sum_{j \in \{d_{ij} \leq d_0\}} \frac{S_j}{\sum_{k \in \{d_{kj} \leq d_0\}} P_k}
+$$
+
+## Índice de acceso espacial (IAE)
+
+Donde:
+
+-   $A_i^F$ representa la accesibilidad de la población en la ubicación $i$ a médicos, basada en el método de áreas de captación flotante en dos pasos.\
+-   $R_j$ es la razón médico-población en la ubicación del médico $j$, cuyo centroide se encuentra dentro del área de captación centrada en la población $i$ (es decir, $d_{ij} \leq d_0$),\
+-   $d_{ij}$ es el tiempo de viaje entre $i$ y $j$.
+
+## Índice de acceso espacial (IAE)
+
+### Interpretación
+
+Un valor más alto de $A_i^F$ indica un mejor acceso a médicos desde esa ubicación poblacional.
+
+> El primer paso asigna una razón inicial a cada área de captación (o área de servicio) centrada en las ubicaciones de los médicos, y el segundo paso suma esas razones iniciales en las áreas de captación superpuestas donde los residentes tienen acceso a múltiples ubicaciones médicas.
+
+Este valor se genera para cada uno de los sectores censales y puede interpretarse como que **cuanto mayor sea la puntuación, más acceso tiene ese sector censal a un proveedor de salud.**
+
+## Coeficiente de acceso espacial (CAE)
+
+### Normalización e interpretación
+
+Sin embargo, el valor del IAE es **difícil de interpretar y requiere que conozcamos la distribución de el indicador en una región**. Para poder interpretar el indicador se normaliza los valores IAE dividiéndolos por el valor IAE medio de toda la región.
+
+Los valores CAE también indican el rango, de modo que **si un sector censal tiene un CAE más alto que otro sector censal, entonces el sector censal con el valor CAE más alto tiene mayor acceso a un proveedor médico**.
+
+## Coeficiente de acceso espacial (CAE)
+
+![](indicador_diagrama.png){fig-align="center"}
+
+## Un primer ejercicio
+
+### Supuestos
+
+-   La población de cada zona censal es determinada por el Censo de Población y Vivienda 2022
+-   El número de doctores en cada hospital lo hemos asumido con una distribución uniforme entre 10 y 20 doctores por hospital.
+-   El número de hospitales en cada zona censal es determinado por la matriz de influencia creada anteriormente (OSM DATA).
+
+## Un primer ejercicio
+
+### Limitaciones
+
+-   La matriz de influencia no considera la capacidad resolutiva de cada hospital.
+-   El registro administrativo de Recursos y Actividades de Salud no dispone de información para poder identificar el hospital.
+
+## Indice de acceso espacial (IAE)
+
+```{r echo=FALSE, eval=TRUE, warning=FALSE, message=FALSE}
+
+indice <- st_read("../data/gpkg/iae_dmq.gpkg", quiet = TRUE)
+
+indice %>% 
+  ggplot() +
+  geom_sf(aes(fill = indice_acceso_espacial)) +
+  scale_fill_viridis_c() +
+  labs(title = "Indice de Acceso Espacial (IAE) en el DMQ",
+       fill = "IAE") +
+  theme_minimal()
+
+```
+
+## Coeficiente de acceso espacial (CAE)
+
+```{r echo=FALSE, eval=TRUE, warning=FALSE, message=FALSE}
+
+indice %>% 
+  mutate(coef_acceso_espacial = indice_acceso_espacial / mean(indice_acceso_espacial, na.rm = TRUE)) %>% 
+  ggplot() +
+  geom_sf(aes(fill = coef_acceso_espacial)) +
+ scale_fill_gradient2(
+    low = "blue",     # color for low values
+    mid = "white",    # color at midpoint
+    high = "red",     # color for high values
+    midpoint = 1      # the value that corresponds to "mid"
+  ) +
+  labs(title = "Coeficiente de Acceso Espacial (CAE) en el DMQ",
+       fill = "CAE") +
+  theme_minimal() 
+
+```
+
+## Siguientes pasos
+
+-   Aplicar el método E2SFCA para calcular el acceso a servicios de salud en otras regiones del país.
+-   Solicitar al INEC acceso a la información sin anonimización para poder depurar el resultado **dentro de un contexto de investigación colaborativa**
+-   Explorar la posibilidad de integrar otros indicadores de salud y servicios para enriquecer el análisis.
+-   Contrastar los resultados con datos administrativos y encuestas de salud para validar las conclusiones.
+
+# El Sistema Integrado de Indicadores Espaciales de la EPN
+
+Acercando los datos a la academia
+
+## El procesamiento de datos
+
+```{mermaid eval = TRUE}
+timeline
+    title Evolución del SIIG
+    2014 : Germen en INEC
+    2019 : Prototipo en STECSDI
+    2023 : Versión académica EPN-ERGOSTATS
+    2025 : Propuesta de reintegración INEC
+```
+
+
+# ¿Por qué un convenio?
+
+
+**Objetivo**  
+
+- Unificar RA desde la fuente + Censo + cartografía oficial para un dashboard nacional de amenidades.
+- Homologación e integración de diversas fuentes.
+- Publicaciones periódicas y alimentación conjunta de indicadores
+
+
+**Necesitamos**  
+
+* FTP / API seguro  
+* Metadatos compatibles  
+* Frecuencia determinada por el calendario estadístico
+
+> Fuentes disponibles: ENEMDU, AMIE, REEM, Senescyt, RAS, Inclusión financiera
+
+
+## Seguridad & gobernanza 
+
+:::: {.columns}
+
+::: {.column width="45%"}
+**INEC gana**  
+
+✔ Indicadores espaciales listos  
+✔ Visibilidad institucional  
+✔ Formación interna  
+✔ Co-autoría papers/herramientas
+
+:::
+
+::: {.column width="45%"}
+**Academia gana**  
+
+✔ Datos oficiales  
+✔ Validación metodológica  
+✔ Difusión conjunta  
+✔ Sustentabilidad SIIG
+
+:::
+
+
+::::
+
+
+
+
+# Nido del Búho – Capacitación conjunta
+
+## Malla piloto
+
+- **Mód. 1** Fundamentos de análisis espacial (R).  
+- **Mód. 2** Modelamiento espacial teoría y práctica.  
+- **Mód. 3** Recomendaciones de política basadas en evidencia.
+
+> La malla se realizó en colaboración con RECIR. Se busca añadir involucrados que puedan potenciar los objetivos de aprendizaje de los estudiantes. 
+
+## Ruta de implementación
+
+| Fase              | Mes 2025 | Acción clave                                     | Rol INEC                         |
+|-------------------|----------|--------------------------------------------------|----------------------------------|
+| Taller interno    | Agosto     | Curso 20 h, tarifa colaboración (-50 %)          | Participar y brindar feedback    |
+| Revisión material | Septiembre      | Ajustes según retroalimentación                  | Validar contenido y ejercicios   |
+| Versión pública   | Octubre      | Lanzamiento a estudiantes externos               | Co-docencia y difusión conjunta  |
+
+
+## Condiciones de colaboración
+
+- Acceso a datos INEC para casos prácticos.  
+- Material y código con licencia **CC-BY-SA** + **coautoría INEC**.  
+- Inclusión de guías, slides y repositorio reproducible.
+
+
+## Resultados esperados
+
+- **Guía de análisis espacial** y slides actualizados.  
+- Indicador implementado como estudio de caso oficial.  
+- Talleres y webinars conjuntos para difundir hallazgos.
+
+# Gracias por su atención
+
