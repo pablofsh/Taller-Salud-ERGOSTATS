@@ -1,0 +1,141 @@
+---
+title: "Borrador"
+format: html
+---
+
+# Resumen  
+El presente artículo mide la brecha territorial en el acceso a los servicios de salud en Ecuador durante el período **2018-2021**. Empezamos con la construcción de un **Indicador de Accesibilidad Espacial a los Servicios de Salud (IAESS)** calculado para cada **zona censal** a escala nacional. El índice se construye a partir de isocronas generadas con **HERE API** (umbrales de 0-10 min y 10-20 min) aplicadas a la red vial oficial, cruzadas con la base de establecimientos del **RAS** y los micro-datos de egresos y defunciones del INEC. Los resultados muestran que el 27 % de la población rural permanece fuera del radio de veinte minutos de viaje, con marcadas disparidades entre regiones naturales. La incorporación del IAESS en los **registros administrativos (RAS)** y en el próximo **Censo** permitiría orientar la planificación sanitaria hacia los territorios con menor nivel de capacidad efectiva, en el sentido de la teoría de **Amartya Sen**.  
+
+**Palabras clave:** accesibilidad espacial; isocronas; desigualdad sanitaria; registros administrativos; capacidad efectiva.
+
+---
+
+# 1 Introducción  
+Empezamos con un reconocimiento del mandato constitucional ecuatoriano de garantizar el derecho a la salud en condiciones de equidad territorial. Sin embargo, la organización actual del Sistema Nacional de Salud (SNS) –basada en distritos y circuitos– no refleja plenamente los patrones reales de movilidad de la población. El objetivo de este estudio es **desarrollar y validar** un indicador sintético de accesibilidad que permita evidenciar tales disparidades y proveer insumos para la toma de decisiones.
+
+## 1.1 El Sistema Nacional de Salud en Ecuador  
+El SNS se estructura en **tres niveles de atención**, definidos por complejidad y cartera de servicios:
+
+1. **Primer nivel (Atención Primaria).**  
+   Puntos de contacto más cercanos a la comunidad: puestos de salud rurales, consultorios generales y centros de salud tipo A, B y C. Su función es prevenir la enfermedad, promocionar la salud y resolver hasta el 80 % de la demanda ambulatoria mediante equipos multidisciplinarios de medicina familiar y comunitaria.
+
+2. **Segundo nivel (Atención Especializada Básica).**  
+   Hospitales básicos y generales que ofrecen consulta externa especializada, cirugía ambulatoria y hospitalización de mediana complejidad. Coordinan el flujo referencial con el primer nivel y garantizan continuidad asistencial para patologías que requieren diagnóstico y tratamiento especializados.
+
+3. **Tercer nivel (Alta Complejidad).**  
+   Hospitales de especialidades y de referencia nacional con servicios de alta tecnología, UCI y sub-especialidades quirúrgicas. Actúan como respaldo de la red y concentran la investigación clínica y la formación de recursos humanos de mayor calificación.
+
+### Enfoque de capacidad efectiva (Amartya Sen) aplicado al SNS  
+El economista **Amartya Sen** propone evaluar el desarrollo en términos de **capacidades** –las “oportunidades reales” que tienen las personas para llevar una vida valiosa– más que en términos de insumos o bienes disponibles. Trasladado al ámbito de la salud, el acceso no se agota en la existencia física de establecimientos; depende de la **posibilidad real** de utilizarlos de manera oportuna y adecuada.  
+- **Funcionamiento:** recibir atención apropiada en el momento necesario.  
+- **Capacidad:** contar con tiempo-distancia razonables, medios de transporte y ausencia de barreras económicas o culturales.  
+
+El IAESS opera justamente como **medida intermedia de capacidad**, cuantificando las oportunidades efectivas de la población para alcanzar niveles 1-3 del SNS dentro de los umbrales aceptables (0-10 min y 10-20 min). Su eventual inclusión en RAS y Censo dotaría al país de un indicador oficial alineado al marco de capacidades, con potencial para monitorear la realización progresiva del derecho a la salud.
+
+
+
+---
+
+# 2 Revisión de literatura  
+*(esqueleto, completar con autores y citas)*  
+- Modelos de accesibilidad (gravity, dos pasos, isocronas).  
+- Aplicaciones en América Latina (Brasil, México, Perú).  
+- Brecha global: escasez de trabajos que vinculen accesibilidad con registros administrativos de resultados (egresos, defunciones).
+
+> Prioridad 1
+---
+
+# 3 Datos y área de estudio  
+
+## 3.1 Fuentes de datos  
+- **RAS 2018-2021:** establecimientos, tipo y coordenadas.  
+- **Registros de egresos hospitalarios 2018-2021:** lugar de egreso, residencia, variables demográficas.  
+- **Registros de defunciones 2018-2021:** causa básica (CID-10), lugar de ocurrencia y residencia.  
+- **Cartografía oficial INEC:** malla censal 2022, red vial nacional y secundaria.  
+
+## 3.2 Unidad de análisis  
+La **zona censal** (promedio ≈ 2.000 habitantes) garantiza granularidad suficiente para capturar heterogeneidad intra-cantonal y se alinea con la base geográfica del próximo Censo.
+
+## 3.3 Área de estudio  
+Cobertura nacional; se distinguen Costa, Sierra, Amazonía y regiones insulares para el análisis comparativo.
+
+> Prioridad 2
+---
+
+# 4 Metodología  
+
+1. **Georreferenciación y limpieza.**  
+   Depuración de duplicados, verificación de coordenadas con SIG, asignación de códigos únicos.
+
+2. **Generación de isocronas con HERE API.**  
+   - Modo «car»; perfiles de velocidad oficial MTOP.  
+   - Bandas de 0-10 min y 10-20 min desde cada establecimiento.  
+   - Unión espacial con malla de zonas censales (intersección área).
+
+3. **Cálculo del IAESS.**  
+   - Proporción de población de cada zona dentro de la banda 0-10 min (acceso óptimo) y 10-20 min (acceso aceptable).  
+   - Ponderación por nivel de atención (peso 1 º > 2 º > 3 º para atención ambulatoria básica).  
+   - Normalización 0-1 y clasificación por quintiles.
+
+4. **Validación.**  
+   - Correlación de IAESS con tasas de egreso por residencia.  
+   - Regresión logística IAESS vs. mortalidad por causas evitables.  
+   - Concordancia con tiempos de viaje auto-reportados (ENEMDU).
+
+5. **Output y documentación.**  
+   Código reproducible alojado en **GitHub** (licencia MIT), dataset agregado listo para integración en RAS y Censo.
+   
+> No vamos a calcular todas las aternativas pero si debemos justificar por que el E2SFCA frente a las 6 alternativas en la slide 11 de la presentación completo.
+> Prioridad 1
+
+---
+
+# 5 Resultados  
+*(titulares sugeridos; insertar mapas y tablas)*  
+- Mapa nacional IAESS (quintiles).  
+- Histograma de población por quintil.  
+- Disparidades rural-urbano y regionales.  
+- Sensibilidad a umbrales de 0-10 vs. 10-20 min.  
+- Resultados de validación (coeficietes, significancia).
+
+> Vamos a comparar 2 o tres ( PAI (Provider-to-Area Ratio), Two-Step Floating Catchment Area (2SFCA)) y creamos un benchmark de comparación con el E2SFCA.
+> Para analizar los clusters usamos Geary o Local Moran
+> Prioridad 2
+
+---
+
+# 6 Discusión  
+- Implicaciones para el rediseño de distritos/circuitos.  
+- IAESS como indicador de capacidad efectiva (Sen).  
+- Comparación con estudios previos en la región.
+
+---
+
+# 7 Conclusiones y recomendaciones  
+- Resumen de hallazgos.  
+- Recomendaciones para MSP e INEC: actualizar cartografía; incorporar IAESS en RAS y Censo; usar IAESS para priorizar inversión.  
+- Futuras líneas: transporte público, series 2022-2025, escenarios de resiliencia climática.
+
+---
+
+# 8 Limitaciones  
+- Falta de datos de transporte público interparroquial.  
+- Potenciales errores de geocodificación.  
+- Suposición de velocidades uniformes.
+
+---
+
+# 9 Agradecimientos  
+Se agradece al INEC por el acceso supervisado a los micro-datos y al equipo de HERE Technologies por el soporte académico facilitado.
+
+---
+
+# 10 Referencias  
+  *(insertar bibliografía en formato CSL, p. ej. `@sen1992`, `@msp2016`)*
+
+---
+
+# Apéndice  
+- Diccionarios de variables.  
+- Scripts R/Python en GitHub.  
+- Mapas cantonales interactivos (Enlace externo).
