@@ -63,6 +63,22 @@ m
 
 # Configuración del entorno de trabajo
 
+## Librería `osmdata`
+
+La librería **`osmdata`** en R permite acceder y consultar datos geoespaciales de **OpenStreetMap (OSM)** de manera directa, facilitando la obtención de información sobre calles, edificios, hospitales, parques y otros elementos geográficos.
+
+Elementos básicos para hacer una consulta con osmdata:
+
+-   `getbb()`: Define el bounding box (área geográfica) donde se realizará la búsqueda.
+
+-   `opq()`: Se utiliza para **crear una consulta OSM** (Overpass Query) dentro de un área geográfica definida.
+
+-   `add_osm_feature()`: Especifica la categoría o tipo de objeto que se quiere obtener según [atributos específicos](https://wiki.openstreetmap.org/wiki/Map_features) mediante **pares clave-valor (key-value)**.
+
+-   `osmdata_sf()`: Obtiene los datos en formato espacial (`sf`) para poder analizarlos o visualizarlos.
+
+La **clave (key)** representa la categoría del objeto (por ejemplo, `amenity`, `highway`, `building`) y el **valor (value)** especifica el tipo dentro de esa categoría (por ejemplo, `hospital`, `bus_stop`, `school`).
+
 ## Cargar librerías y datos
 
 ```{r}
@@ -71,11 +87,7 @@ library(tidyverse)
 library(osmdata)
 library(sf)
 
-
-
 ```
-
-## Obtener datos
 
 Para obtener las ubicaciones de los hospitales realizamos una consulta a la API de OSM.
 
