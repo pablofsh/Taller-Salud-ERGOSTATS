@@ -1,0 +1,128 @@
+---
+title: "Consulta OSM"
+author: "Pablo Sarango"
+format: html
+editor: visual
+---
+
+# Introducción
+
+::: callout-note
+## Objetivo
+
+-   Obtener y visualizar la ubicación de los hospitales del Distrito Metropolitano de Quito (DMQ) a partir de datos abiertos de [OpenStreetMap (OSM)](#0).
+:::
+
+Contar con las ubicaciones geográficas precisas de los hospitales es esencial porque representan los **puntos de oferta de servicios de salud** dentro del método **Enhanced Two-Step Floating Catchment Area (E2SFCA)**.
+
+De esta forma, la información obtenida servirá para:
+
+-   Definir las fuentes de atención médica dentro del DMQ.
+
+-   Calcular posteriormente las **zonas de influencia** o **isocronas** alrededor de cada hospital.
+
+-   Integrar la variable de tiempo de viaje en la estimación del acceso potencial a los servicios de salud.
+
+## OpenStreetMap
+
+[OpenStreetMap](http://www.openstreetmap.org/) es una iniciativa para **crear y proporcionar datos geográficos gratuitos**, como mapas de calles, a cualquier persona.
+
+```{r}
+#| echo: false
+
+library(leaflet)
+library(htmlwidgets)
+
+# Coordenadas de ejemplo: centro de Quito
+lon <- -79.20422
+lat <- -3.99313
+
+# Crear el mapa
+m <- leaflet() %>%
+  # Vista inicial (longitud, latitud, zoom)
+  setView(lng = lon, lat = lat, zoom = 12) %>%
+  
+  # Capa de tiles: OpenStreetMap (tile server oficial)
+  addProviderTiles(providers$CartoDB.Positron, 
+                   group = "CartoDB Positron") %>% 
+  addProviderTiles(providers$OpenTopoMap, 
+                   group = "OpenTopoMap") %>% 
+  addTiles(group="OpenStreetMap") %>%
+  
+  # Barra de escala
+  addScaleBar(position = "bottomleft") %>%
+  # Control de capas (por si quieres añadir más capas en el futuro)
+  addLayersControl(baseGroups = c("CartoDB Positron", "OpenTopoMap", "OpenStreetMap"),
+                   options = layersControlOptions(collapsed = TRUE))
+
+# Mostrar en RStudio / navegador
+m
+
+
+```
+
+# Configuración del entorno de trabajo
+
+## Cargar librerías y datos
+
+```{r}
+
+library(tidyverse)
+library(osmdata)
+library(sf)
+
+
+
+```
+
+## Obtener datos
+
+Para obtener las ubicaciones de los hospitales realizamos una consulta a la API de OSM.
+
+```{r}
+
+hospitales_sf <- 
+  # Obtenemos la zona de donde queremos consultar
+  getbb("Quito Ecuador") %>% 
+  
+  # Creamos la consulta 
+  opq() %>% 
+  
+  # Especificamos las caracteristicas deseadas de OSM
+  add_osm_feature(key = "amenity",
+                  value = "hospital") %>% 
+  
+  # Especificamos el formato de salida de los datos como sf
+  osmdata_sf()
+
+# Visualizamos los datos obtenidos 
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron", 
+                   group = "Greyscale") %>% 
+  addPolygons(data = hospitales_sf$osm_polygons[1])
+
+```
+
+Debido a que en algunos casos los puntos obtenidos apuntan a las esquinas de los hospitales vamos a obtener sus centroides.
+
+```{r}
+
+hospitales_centroides <- hospitales_sf$osm_polygons %>%
+  # Seleccionamos los nombres de los hospitales asi como su geomtria 
+  select(name, geometry) %>% 
+  
+  # Obtenemos los centroides de los poligonos
+  st_centroid() %>% 
+  
+  # Se omiten las filas sin nombre
+  na.omit()
+
+# Visualizamos los hospitales en el DMQ
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron", 
+                   group = "Greyscale") %>% 
+  addCircleMarkers(data = hospitales_centroides)
+
+# Exportamos los centroides obtenidos como shapefile
+# st_write(hospitales_centroides, "hospitales.shp")
+```
