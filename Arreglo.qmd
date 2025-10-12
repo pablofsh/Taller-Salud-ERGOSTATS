@@ -1,0 +1,458 @@
+---
+title: "Arreglo"
+format: html
+editor: visual
+---
+
+# Importar librerías
+
+```{r}
+
+# Cargar Librerias
+if (!require("pacman")) {
+  install.packages("pacman")
+  library(pacman)
+} 
+
+pacman::p_load(
+  sf,           # Manipulación de datos espaciales
+  tidyverse,    # Manipulación de datos 
+  leaflet,      # Crear mapas interactivos
+  hereR,        # Paquete para acceder a la API HERE 
+  osmdata       # Paquete para descargar datos de OpenStreetMaps (OSM)
+)
+```
+
+## Obtener las ubicaciones de los hospitales en el DMQ
+
+Para obtener las ubicaciones de los hospitales realizamos una consulta a la API de OSM.
+
+```{r}
+
+hospitales_sf <- 
+  # Obtenemos la zona de donde queremos consultar
+  getbb("Quito Ecuador") %>% 
+  
+  # Creamos la consulta 
+  opq() %>% 
+  
+  # Especificamos las caracteristicas deseadas de OSM
+  add_osm_feature(key = "amenity",
+                  value = "hospital") %>% 
+  
+  # Especificamos el formato de salida de los datos como sf
+  osmdata_sf()
+
+# Visualizamos los datos obtenidos 
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron", 
+                   group = "Greyscale") %>% 
+  addPolygons(data = hospitales_sf$osm_polygons[1])
+
+```
+
+Debido a que en algunos casos los puntos obtenidos apuntan a las esquinas de los hospitales vamos a obtener sus centroides.
+
+```{r}
+
+hospitales_centroides <- hospitales_sf$osm_polygons %>%
+  # Seleccionamos los nombres de los hospitales asi como su geomtria 
+  select(name, geometry) %>% 
+  
+  # Obtenemos los centroides de los poligonos
+  st_centroid() %>% 
+  
+  # Se omiten las filas sin nombre
+  na.omit()
+
+# Visualizamos los hospitales en el DMQ
+leaflet() %>% 
+  addProviderTiles("CartoDB.Positron", 
+                   group = "Greyscale") %>% 
+  addCircleMarkers(data = hospitales_centroides)
+
+# Exportamos los centroides obtenidos como shapefile
+# st_write(hospitales_centroides, "hospitales.shp")
+```
+
+# Sección 1: Crear las zonas de influencia o captación
+
+## Crear Isocronas
+
+```{r}
+
+#|eval: false 
+
+### ESTE PEDAZO CREA UNA SOLA ISOCRONA
+
+# Configurar la llave de HERE
+here_key <- "AQUI SE NECESITA TU LLAVE"
+set_key(here_key)
+
+# Crear isocronas
+iso <- isoline(
+  # Punto(s) desde donde parte la isocrona. Debe ser un objeto sf
+  poi = hospitales_centroides[1,],
+  
+  # Vector que contiene los intervalos de corte en segundos (10 y 20 min) 
+  range = c(10,20)*60,
+  
+  # Indica el tipo de rango: tiempo, distancia o energia 
+  range_type = "time",
+  
+  # Fecha y tiempo del calculo para simular trafico en tiempo real 
+  datetime = as.POSIXct(paste0(Sys.Date(), " 10:00"))
+  
+) %>%
+  # Le asignamos una columna nueva para identificar cada nivel de las isocronas
+  mutate(name = paste0((range - 600) / 60," to ", range / 60, " mins")) 
+
+# Transformar el objeto sf a SpatialPolygonDataFrame para visualizarlo con leaflet
+iso_vis <- as(iso, "Spatial")
+
+# Visualizar las isocronas
+isocronas_sector_censal <- leaflet() %>% 
+  # Añadir mapa base 
+  addProviderTiles("CartoDB.Positron", 
+                   group="Greyscale") %>% 
+  
+  # Añadir las isocronas
+  addPolygons(data = iso, 
+              color = c("yellow", "blue")) %>% 
+  
+  # Añadir el sector censal
+  addCircleMarkers(data = hospitales_centroides[1,], 
+                   color = "green")
+
+isocronas_sector_censal
+
+```
+
+# Isocronas para cada hospital
+
+```{r}
+
+
+###### NO EVALUAR ESTE PEDAZO PORQUE PRODUCE TODAS LAS ISOCRONAS ######
+
+# Crear una carpeta para guardar los shapefiles de las isocronas
+dir.create("data/shp/isocronas_hospitales", 
+           showWarnings = FALSE)
+
+# Bluce para crear un conjunto de isocronas de 0-10 y 10-20 min por cada centroide
+for(i in 1:nrow(hospitales_centroides)){
+  
+  isocrona <- isoline(
+    poi = hospitales_centroides[i,],
+    range = seq(10, 20, 10) * 60,
+    range_type = "time",
+    datetime <- as.POSIXct(paste0(Sys.Date()," 10:00"))
+  ) %>%
+    mutate(name = paste0((range - 600) / 60," to ", range / 60, " mins"))
+
+  # Guardar poligonos en carpeta isocronas
+  dsn <- paste0("data/shp/isocronas_hospitales")
+  
+  # Asignar un nombre a cada archivo shapefile
+  layer <- hospitales_centroides$name[i]
+  
+  st_write(obj = isocrona,
+           dsn = dsn,
+           layer = layer,
+           driver = "ESRI Shapefile",
+           delete_layer = TRUE)
+ 
+  # Añadir una pausa de 1 segundo al crear los archivos para prevenir sobrecarga
+  Sys.sleep(1)
+}
+```
+
+# Sección 2: Crear la matriz de influencia o captación
+
+::: callout-note
+## Objetivos de esta sección
+
+1.  Trazar los centroides de las zonas censales sobre las isocronas (zonas de influencia).
+2.  Generar una matriz que identifique en qué isocrona está localizada cada sector censal.
+:::
+
+## Importar datos de sectores censales
+
+Aquí la gente va a necesitar las zonas censales de quito y se va a usar para obtener las geometrías en la sección [Generar la matriz de influencia completa]
+
+```{r}
+
+#|eval: false
+
+# Importar datos
+ruta <- "data/gpkg/base_map_dmq.gpkg"
+mapa_base_dmq <- st_read(ruta,
+                         layer = "dmq")
+```
+
+## Transformacion de los datos
+
+```{r}
+
+#| eval: false 
+
+# Obtener los centroides de cada zona censal
+centroides_dmq <- st_centroid(mapa_base_dmq) %>% 
+  # Transformar de UTM a Geograficas 
+  st_transform(4326) %>% 
+  
+  # Seleccionar solo las columnas de nombre y geometría
+  select(5,6)
+
+
+# Visualizar los centroides
+leaflet() %>% 
+  # Añadir mapa base 
+  addProviderTiles("CartoDB.Positron", 
+                   group="Greyscale") %>% 
+  
+  # Añadir los centroides
+  addCircleMarkers(data = centroides_dmq)
+
+
+st_write(
+  centroides_dmq,
+  "data/shp/centroide_sector_censal.shp"
+)
+  
+```
+
+## Trazar las ubicaciones de las zonas censales sobre las isocronas de los hospitales (zonas de influencia)
+
+```{r}
+# Importamos las isocronas correspodiente al primer hospital  
+isocrona_ejemplo_hospital <- st_read("data/shp/isocronas_hospitales/Hospital del Sur (Enrique Garces).shp")
+
+# Hacemos una intersección entre los centroides (puntos) y la isocronas (polígonos)
+interseccion <- st_join(centroides_dmq, 
+                        isocrona_ejemplo_hospital,
+                        # Hacemos una operacion de que nos devuelva un valor logico en lugar de usar una que cree nuevas geometrias como st_intersection()
+                        join = st_within) %>%
+  
+  # Agrupamos por cada sector censal
+  group_by(zon) %>%
+  
+  # Seleccionar la isocrona más cercana (menor rango de tiempo)
+  # evitando duplicados si un mismo centroide cae en varias isocronas del mismo hospital.
+  slice_min(order_by = rank, n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+```
+
+Visualizamos cómo se verían los sectores censales que caen dentro de las isocronas del primer hospital.
+
+```{r}
+# Visualizar los sectores censales que caen dentro de las isocronas
+interseccion_vis <- na.omit(interseccion)
+
+# Agregamos los los hospitales sobre las isocronas del sector censal N 
+isocronas_sector_censal %>% 
+  addCircleMarkers(data = interseccion_vis, color = "red")
+```
+
+## Generar la matriz de influencia completa
+
+```{r}
+#| eval: false
+
+# Ruta donde se encuentran las isocronas
+isocronas_lista <- "data/shp/isocronas_hospitales/"
+
+# Ruta completa de cada isocrona
+isocrona_ruta <- list.files(path = isocronas_lista,
+                              pattern = ".shp",
+                              full.names = TRUE)
+
+# Nombres de cada sector censal para cada isocrona
+shape.names <- list.files(path = isocronas_lista,
+                          pattern = ".shp",
+                          full.names = FALSE) %>%
+  str_remove(".shp")
+
+# Creamos una lista vacia donde guardar nuestra operacion 
+lista <- list()
+
+lista <- setNames(
+  lapply(seq_along(isocrona_ruta), function(i) {
+    shapefile <- st_read(isocrona_ruta[i])
+    
+    st_join(centroides_dmq, shapefile, join = st_within) %>%
+      group_by(zon) %>%
+      slice_min(order_by = rank, n = 1, with_ties = FALSE) %>%
+      ungroup() %>%
+      as_tibble()
+  }),
+  shape.names
+)
+
+matriz_completa <- map2(shape.names, lista, function(nombre, elemento){
+  elemento %>% select(zon, name) %>% 
+    rename_with(.fn = ~nombre, .cols = "name")
+}) %>% 
+  reduce(full_join) 
+
+
+# Aquí se necesita los sectores censales para obtener las geometrías 
+matriz_completa <- left_join(mapa_base_dmq, matriz_completa)
+
+```
+
+# Me quedé desde aquí para abajo
+
+# Sección 3: Crear la matriz de ponderaciones o pesos
+
+::: callout-note
+# Objetivos de esta sección
+
+1.  Definir la función de distancia (impedancia) para obtener los pesos de cada isocrona.
+
+2.  Rellenar la matriz con los valores de oferta, demanda y los pesos correspondientes según el tiempo de viaje.
+:::
+
+## Función de distancia (impedancia)
+
+Creamos la función de impedancia para asignar los pesos correspondientes a los hospitales en base a la distancia.
+
+```{r}
+
+# Funcion gausiana (impedancia)
+impedancia <- function(mintiempo, subzonatiempo, maxtiempo){
+  beta <- -((maxtiempo-mintiempo)^2)/log(0.01)
+  peso <- exp(-(subzonatiempo-mintiempo)^2/beta)
+  peso <- round(peso, 2)
+  return(peso)
+}
+
+# Crear pesos para la matriz de pesos
+peso_NA <- 0
+peso_10 <- impedancia(mintiempo = 5, subzonatiempo =  5, maxtiempo = 10)
+peso_20 <- impedancia(mintiempo = 5, subzonatiempo = 15, maxtiempo = 20)
+
+# Definir los nombres de las subzonas en la matriz de pesos
+sub1 <- "0 to 10 mins"
+sub2 <- "10 to 20 mins"
+
+```
+
+## Medidas de la oferta y la demanda
+
+Añadimos a la matriz los valores de los médicos disponibles por cada hospital (oferta) y de la población en cada sector censal (demanda).
+
+```{r}
+
+# Se reordena la matriz en formato longer para realizar calculos en grupo
+tabla <- matriz_completa %>% 
+  pivot_longer(
+    
+    # Los nombres de las columnas son los siguientes:
+    cols = matches("17"),
+    
+    # Estos nombres van a ir a la nueva columna "sector_censal"
+    names_to = "sector_censal",
+    
+    # Las isocronas en las que se encuentra cada sector censal va a
+    values_to = "isocronas") %>% 
+  
+  arrange(sector_censal, Hospital)
+
+# Creamos un dataframe con datos demograficos (poblacion) para cada sector censal
+datos_demo <- tabla %>%
+  # Dame todos los valores unicos en la columna  
+  distinct(sector_censal) %>% 
+  
+  # Agrega una nueva columna de poblacion
+  mutate(poblacion = runif(n(),100, 200)) 
+
+# Creamos un dataframe con numero de doctores (oferta) para cada hospital
+datos_doctor <- tabla %>% 
+  distinct(Hospital) %>% 
+  mutate(doctores = runif(n(),10, 20))
+
+```
+
+# Sección 4: Calcular el Índice de acceso espacial y el Coeficiente de acceso espacial
+
+::: callout-note
+# Objetivos de esta sección
+
+1.  Calcular el índice de acceso espacial (IAE).
+
+2.  Calcular el coeficiente de acceso espacial (CAE).
+:::
+
+## Índice de acceso espacial (IAE)
+
+Este valor se genera para cada uno de los sectores censales y puede interpretarse como que cuanto mayor sea la puntuación, más acceso tiene ese sector censal a un proveedor de salud.
+
+```{r}
+iae_df <- lista_vieja %>% 
+  # Por cada elemento de la lista 
+  map(~{.x %>%
+      
+      # Multiplicar la poblacion de cada sector censal por su peso correspondiente
+      mutate(poblacion_ponderada = poblacion * peso) %>% 
+      
+      # Dividir el numero de doctores por la poblacion ponderada para obtener el supply-demand ratio
+      mutate(razon_proveedor_poblacion = doctores / poblacion_ponderada) %>% 
+      
+      # Operacion 1 del Indice de Acceso Espacial: Multiplicar el supply-demand ratio por los pesos
+      mutate(multiplicacion = razon_proveedor_poblacion * peso) %>% 
+      group_by(sector_censal) %>% 
+      summarise(
+        
+        # Operacion 2 del Indice de Acceso Espacial: Sumar todos estos resultados 
+        indice_acceso_espacial = sum(!is.na(multiplicacion), na.rm = T))
+  }) %>% 
+  bind_rows()
+```
+
+## Coeficiente de acceso espacial (CAE)
+
+Sin embargo, el valor del IAE es difícil de interpretar y, en cierto modo, carece de sentido si no se conoce la distribución completa de los valores en la región. Para resolver ambos problemas, el siguiente paso de este análisis es calcular un Coeficiente de Acceso Espacial (CAE), que normaliza los valores IAE dividiéndolos por el valor IAE medio de toda la región.
+
+Un valor CAE de exactamente 1 significa que esa unidad geográfica tiene exactamente el acceso medio a un proveedor de asistencia sanitaria para esa región. Las unidades geográficas con un CAE superior a 1 tienen un acceso mayor que la media regional y las unidades geográficas con valores CAE inferiores a 1 tienen un acceso menor que la media regional.
+
+Los valores CAE también indican el rango, de modo que si un sector censal tiene un CAE más alto que otro sector censal, entonces el sector censal con el valor CAE más alto tiene mayor acceso a un proveedor médico.
+
+```{r}
+iae_df <- iae_df %>% 
+  mutate(
+    coeficiente_acceso_espacial = indice_acceso_espacial / mean(indice_acceso_espacial))
+```
+
+## Visualización de datos
+
+En el data frame que obtuvimos no podemos graficarlo porque no contamos con la geometría de cada sector censal.
+
+```{r}
+
+# Agreamos la información de las geometrías a nuestro data frame 
+iae_sf <- mapa_base_dmq %>% 
+  left_join(iae_df, by = c("zon" = "sector_censal")) %>% 
+  st_transform(4326) %>% 
+  select(zon:geom) %>% 
+  rename(sector_censal = zon) %>% 
+  na.omit()
+
+# Creamos una paleta de colores para el IAE
+palette <- colorNumeric(palette = "viridis",
+                        domain = iae_sf$indice_acceso_espacial)
+
+# Visualizamos el IAE para el DMQ segun sus sectores censales
+
+iae_sf %>% 
+leaflet() %>% 
+  addTiles() %>% 
+  addPolygons(fillColor = ~palette(indice_acceso_espacial), 
+              popup = paste0(
+                round(iae_sf$indice_acceso_espacial,2))) %>% 
+  addLegend("topright",
+            pal = palette,
+            values = ~indice_acceso_espacial,
+            opacity = 1)
+```
