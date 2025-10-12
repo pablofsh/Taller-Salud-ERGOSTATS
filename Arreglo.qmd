@@ -257,6 +257,8 @@ isocronas_sector_censal %>%
 
 ## Generar la matriz de influencia completa
 
+Vas a necesitar todas las isocronas para hacer esto, así que voy a subirlas a un drive-
+
 ```{r}
 #| eval: false
 
