@@ -1,0 +1,224 @@
+---
+title: "Presentación-Taller"
+format: revealjs
+editor: visual
+bibliography: references.bib
+csl: nature.csl
+---
+
+# Contexto y relevancia
+
+El acceso a la atención sanitaria es un indicador del desempeño del sistema de salud y de la prestación equitativa de la atención [@levesque2013].
+
+![Fuente: Unir México](https://mexico.unir.net/wp-content/uploads/sites/6/2022/08/calidad-en-salud-id1063720520.jpg)
+
+# Contexto y relevancia
+
+> Sin embargo, el **acceso** a la atención médica **varía** según la **zona**.
+
+Depende de:
+
+-   La ubicación de los profesionales de la salud (oferta).
+
+-   El lugar de residencia de la población(demanda).
+
+## De modo que surge la necesidad de métodos cuantitativos espaciales para evaluar el acceso.
+
+# ¿Qué entendemos por “acceso” en salud?
+
+Aquí lo que quería hacer era mostrar distintas imagenes para preguntar a la gente que es lo que entienden por acceso.
+
+![](https://prensa.css.gob.pa/wp-content/uploads/2021/09/IMG-20210901-WA0021-768x445.jpg)
+
+![](https://static.wixstatic.com/media/7869d1_b0af4d3bb0854b3ea85637ad84ec316a~mv2.jpg/v1/fill/w_568,h_332,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/7869d1_b0af4d3bb0854b3ea85637ad84ec316a~mv2.jpg)
+
+# ¿Qué entendemos por “acceso” en salud?
+
+La accesibilidad se refiere a la relativa facilidad con la que se puede llegar a determinados lugares desde una ubicación determinada [@luo2003].
+
+# ¿Qué entendemos por “acceso” en salud?
+
+El acceso comprende dimensiones espaciales y no espaciales [@beks2023]:
+
++------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
+| Dimensiones espaciales                                                                                                       | Dimensiones no espaciales                                                                        |
++==============================================================================================================================+==================================================================================================+
+| Accesibilidad: proximidad de los servicios a los consumidores, teniendo en cuenta la distancia y el tiempo de desplazamiento | Asequibilidad: costo de la atención médica para los proveedores de servicios y los consumidores  |
++------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
+| Disponibilidad: ubicación y capacidad de los servicios para satisfacer la demanda de los consumidores y la comunidad         | Aceptabilidad: actitudes hacia los servicios desde la perspectiva del proveedor y del consumidor |
++------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
+|                                                                                                                              | Acomodación: cómo se organizan y estructuran los servicios                                       |
++------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
+|                                                                                                                              | Concienciación: comunicación sobre los servicios entre proveedores, consumidores y comunidades   |
++------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
+|                                                                                                                              | Puntualidad: capacidad de prestar el servicio a los consumidores cuando lo necesitan             |
++------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
+
+# Medidas de acceso espacial
+
+Las medidas de acceso espacial tienen en cuenta la **distribución geográfica** y las **características** de los **servicios** y los **consumidores** que **afectan** a la proximidad de los servicios a los consumidores (**accesibilidad**), la ubicación y la capacidad de los servicios (**disponibilidad**) y cómo esto se **relaciona** con la capacidad de los consumidores para obtener los servicios que necesitan (**acceso potencial**) o seguir utilizando los servicios (**acceso real**) [@khan1992; @meade2010; @russell2013].
+
+# Tipos de métodos espaciales
+
+En general podemos clasificar a las métricas para medir el acceso espacial en:
+
+## Métodos basandos en áreas
+
+Examinan las características y relaciones de los servicios de salud y las poblaciones a dentro de un área geográfica definida [@wood2023]
+
+-   **Proporción entre proveedores y población:** Es el número de proveedores en relación con el tamaño de la población en una área geográfica definida [@drake2021].
+
+-   **El área de influencia flotante:** Método de varios pasos que calcula la proporción entre población y proveedores dentro de un área de influencia utilizando buffers circulares (es decir, un área) alrededor de un centroide [@luo2009].
+
+-   **Método gravitacional:** Se basa en la analogía con la ley de gravedad: la interacción entre la población (demanda) y los servicios de salud (oferta) disminuye conforme aumenta la distancia o el tiempo de viaje [@luo2003].
+
+Limitación: Sujetas a sesgos espaciales, como el problema de la unidad de área modificable (MAUP, por sus siglas en inglés) (es decir, cómo la escala espacial aplicada influirá en los resultados) y la falacia ecológica (es decir, la inferencia incorrecta entre escalas espaciales) [@buzzelli2020].
+
+## Métodos basandos en distancias
+
+En lugar de agregados por área fija, estos métodos calculan relaciones puntuales entre usuarios y servicios [@wood2023].
+
+-   **Distancia euclidiana:** Distancia en línea recta entre dos puntos [@apparicio2017].
+
+-   **Buffer de varios anillos:** Crea varios anillos (buffers) a distancias fijas alrededor de un punto de interés (por ejemplo, un hospital) [@delamater2012].
+
+-   **Distancia de la red vial:** Mide la distancia (en km o millas) entre dos lugares siguiendo la red vial o de transporte público [@delamater2012].
+
+-   **Tiempo de viaje:** Calcula el tiempo de viaje (en minutos u horas) a lo largo de una red vial o ruta (carretera, senderos, transporte público) [@delamater2012].
+
+La aplicación de medidas basadas en la distancia requiere hacer suposiciones sobre las poblaciones, incluyendo los vehículos y las características de conducción, así como las condiciones del tráfico local, y que las poblaciones recorran la ruta más corta [@delamater2012].
+
+# Tabla de comparación de métodos espaciales
+
++-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
+| Método                                          | Descripción                                                                                                                         | Ventajas                                                   | Limitaciones                                                     |
++=================================================+=====================================================================================================================================+============================================================+==================================================================+
+| **1. Proporción entre proveedores y población** | Razón simple entre número de proveedores en un área y la población en esa misma área.                                               | Muy fácil de calcular.                                     | Ignora distancia, movilidad y oferta externa.                    |
++-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
+| **2. Gravity Model**                            | Calcula la accesibilidad ponderando oferta y demanda según distancia o tiempo, usando una función de impedancia.                    | Considera distancia y competencia por servicios.           | Requiere calibración del parámetro de distancia.                 |
++-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
+| **3. Two-Step Floating Catchment Area (2SFCA)** | Evalúa cobertura considerando relaciones entre proveedores y población dentro de áreas de captación (buffers).                      | Balancea oferta y demanda local. Sencillo y flexible.      | Usa límites binarios de accesibilidad (dentro/fuera del buffer). |
++-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
+| **4. Enhanced 2SFCA (E2SFCA)**                  | Variante del 2SFCA que introduce un **decay function** para ponderar la accesibilidad según distancia dentro del área de captación. | Más realista al modelar caída del acceso con la distancia. | Requiere elegir forma y parámetros del decaimiento.              |
++-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
+| **5. Modified 2SFCA (M2SFCA)**                  | Integra mejoras como buffers múltiples, congestión por demanda y tipos de servicios diferenciados.                                  | Aumenta precisión y especificidad.                         | Más complejo de implementar.                                     |
++-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
+| **6. Kernel Density 2SFCA (KD2SFCA)**           | Sustituye buffers fijos por una función kernel (suavizado) que modela la influencia de los proveedores de forma continua.           | Más fiel a los patrones reales de accesibilidad.           | Alta carga computacional y parámetros a calibrar.                |
++-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
+
+## Enhanced E2SFCA
+
+## Insumos requeridos
+
+### 1. Datos de la Demanda (Población)
+
+-   **Población por Ubicación de Origen** $P_k$: Un conteo de la población en cada área de origen, como celdas de cuadrícula o bloques censales. Esto representa a las personas que necesitan el servicio.
+
+-   **Ubicaciones de Origen**: Las coordenadas geográficas (latitud, longitud) de cada centro de población o el punto central de cada celda de cuadrícula.
+
+### 2. Datos de la Oferta (Servicios)
+
+-   **Capacidad del Servicio** $Sj$: Una medida del tamaño o capacidad del servicio en cada ubicación. En el contexto médico, esto podría ser el número de médicos, camas de hospital, o la cantidad de horas de servicio disponibles.
+
+-   **Ubicaciones de los Servicios**: Las coordenadas geográficas (latitud, longitud) de cada punto de servicio, como una clínica o un hospital.
+
+### 3. Datos de Distancia/Tiempo de Viaje
+
+-   **Matriz de Tiempo de Viaje** $d_{kj}​, d_{ij}$​: Los tiempos de viaje entre todas las ubicaciones de origen y todas las ubicaciones de servicio. Representan la "fricción de la distancia" que las personas experimentan para acceder a los servicios.
+
+### 4. Parámetros del Modelo E2SFCA
+
+-   **Umbral de Tiempo de Viaje** $Dr​$: Un conjunto de umbrales de tiempo de viaje (por ejemplo, 10, 20 y 30 minutos) que definen las zonas de accesibilidad. Estos se utilizan para agrupar los viajes en diferentes "cubetas" o zonas.
+
+-   **Ponderaciones de Distancia** $Wr$​: Un conjunto de ponderaciones que disminuyen con la distancia, generalmente calculadas con una **función gaussiana**. Estas ponderaciones reflejan que la accesibilidad es mayor para distancias más cortas y disminuye gradualmente a medida que la distancia aumenta.
+
+## Salidas
+
+-   **Accesibilidad poblacional** $A_i^F$
+    -   Valor numérico que indica la accesibilidad de la población en la ubicación $i$ a los médicos o servicios de salud.
+-   **Ratios médico-población por área de captación** $R_j$​
+    -   Esto muestra la disponibilidad relativa de médicos dentro de cada catchment.
+
+### Metodología
+
+Paso 1:
+
+La zona de influencia de la ubicación del médico $j$ se define como el área dentro de una zona de conducción de 30 minutos [@luo2009]. Dentro de cada zona de influencia, se calculan tres zonas de tiempo de viaje con intervalos de minutos de 0-10, 10-20 y 20-30 minutos (zonas 1-3, respectivamente). Se buscan todas las ubicaciones de la población ($k$) que se encuentran dentro de una zona de tiempo de viaje umbral ($D_r$) desde la ubicación $j$ (esta es la zona de influencia $j$), y se calcula la relación ponderada de médico a población, $R_j$, dentro de la zona de influencia de la siguiente manera:
+
+$$
+R_j = \frac{S_j}{\sum_{k\in\{d_{kj}\in D_r\}} P_k W_r} \\ = \frac{S_j}{\sum_{k\in\{d_{kj}\in D_1\}} P_k W_1 + \sum_{k\in\{d_{kj}\in D_2\}} P_k W_2 + \sum_{k\in\{d_{kj}\in D_3\}} P_k W_3}$$
+
+Donde
+
+-   $P_k$ es la población de la celda de la cuadrícula $k$ que cae dentro de la zona de influencia $j$ ($d_{kj} \in D_r$),
+
+-   $S_j$ el número de médicos en la ubicación $j$,
+
+-   $d_{kj}$ el tiempo de viaje entre $k$ y $j$,
+
+-   $D_r$ la zona de tiempo de viaje $r$ ($r=1-3$) dentro de la zona de influencia.
+
+-   $W_r$ es la ponderación de distancia para la zona de tiempo de viaje $r$ calculada a partir de la función gaussiana, que captura el deterioro de la accesibilidad al médico $j$ con la distancia.
+
+Paso 2:
+
+Para cada ubicación de población $i$, se buscan todas las ubicaciones de médicos ($j$) que se encuentran dentro de una zona de tiempo de viaje de 30 minutos desde la ubicación $i$ (es decir, la zona de influencia $i$), y se suman las relaciones de médico a población (calculadas en el paso 1), $R_j$, en estas ubicaciones de la siguiente manera:
+
+$$
+A_i^F = \sum_{j\in\{d_{ij}\in D_r\}} R_j W_r \\
+= \sum_{j\in\{d_{ij}\in D_1\}} R_j W_1 + \sum_{j\in\{d_{ij}\in D_2\}} R_j W_2 + \sum_{j\in\{d_{ij}\in D_3\}} R_j W_3
+$$
+
+Donde
+
+-   $A_i^F$ representa la accesibilidad de la población en la ubicación $i$ a los médicos,
+
+-   $R_j$ la relación médico-población en la ubicación del médico $j$ que cae dentro de la zona de influencia centrada en la población $i$ (es decir, $d_{kj} \in D_r$),
+
+-   $d_{ij}$ el tiempo de viaje entre $i$ y $j$. Las mismas ponderaciones de distancia derivadas de la función gaussiana utilizadas en el paso 1 se aplican a diferentes zonas de tiempo de viaje para tener en cuenta la disminución del acceso con la distancia.
+
+# Tabla de comparación de métodos para crear isocronas para la segunda parte del taller
+
++---------------------+-----------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Paquete y función   | Insumos que requiere                                                                                                              | Consideraciones para aplicar                                                                                                                                 |
++=====================+===================================================================================================================================+==============================================================================================================================================================+
+| `osrm`              | `loc:`Puntos de origen que pueden ser:                                                                                            | Utiliza la API de OSM para calcular las isocronas a partir de la red de caminos en OSM.                                                                      |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+| -   `osrmIsochrone` | -   un vector de coordenadas (longitud y latitud, WGS 84),                                                                        | Usa datos abiertos.                                                                                                                                          |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+|                     | -   un data.frame de longitudes y latitudes (WGS 84),                                                                             | Debido a que utiliza la API el valor de la resolución no debería ser alto para evitar procesamientos largos.                                                 |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+|                     | -   una matriz de longitudes y latitudes (WGS 84),                                                                                |                                                                                                                                                              |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+|                     | -   un objeto `sf` de tipo `POINT`.                                                                                               |                                                                                                                                                              |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+|                     | `res:` Número de puntos utilizados para calcular las isócronas. Se incrementa para obtener una mejor resolución de las isocronas. |                                                                                                                                                              |
++---------------------+-----------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `r5r`               | `r5r_network:` Un conjunto de datos de la red de carreteras de OpenStreetMap en formato `.pbf`.                                   | Usa datos de OSM y transporte público.                                                                                                                       |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+| -   `isochrone`     | `origins:` O bien un objeto `POINT sf` con WGS84 CRS, o bien un `data.frame` que contenga las columnas `id`, `lon` y `lat`.       | Usa datos abiertos.                                                                                                                                          |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+|                     |                                                                                                                                   | Es complicado de setear porque requiere instalar Java y alocar ram para el procesamiento.                                                                    |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+|                     |                                                                                                                                   | El archivo `.pbf` suele ser pesado y tiene que descargarse y tiene que descargarse de alguno de estos proveedores:                                           |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+|                     |                                                                                                                                   | -   [osmextract](https://docs.ropensci.org/osmextract/) R paquete                                                                                            |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+|                     |                                                                                                                                   | -   [geofabrik](https://download.geofabrik.de/) website                                                                                                      |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+|                     |                                                                                                                                   | -   [hot export tool](https://export.hotosm.org/) website                                                                                                    |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+|                     |                                                                                                                                   | -   [BBBike.org](https://extract.bbbike.org/) website                                                                                                        |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+|                     |                                                                                                                                   | -   [Protomaps](https://protomaps.com/downloads/osm) website                                                                                                 |
++---------------------+-----------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `hereR`             | `poi:` Objeto `sf`, puntos de interés (POI) de geometría `POINT`.                                                                 | Produce isocronas bastante precisas y detalladas.                                                                                                            |
+|                     |                                                                                                                                   |                                                                                                                                                              |
+| -   `isoline`       | `range:` Un vector de tipo entero que contiene cortes para la generación de las isolíneas.                                        | El paquete fremium para acceder a la API de Here requiere ingresar datos de pago. Sin embargo, este plan cubre bastante bien las necesidades de este taller. |
++---------------------+-----------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+`osrm`: https://cran.r-project.org/web/packages/osrm/refman/osrm.html#osrmIsochrone `r5r` : https://ipeagit.github.io/r5r/reference/isochrone.html
+
+`hereR`: https://cran.r-project.org/web/packages/hereR/refman/hereR.html#isoline
+
+# Bibliografía

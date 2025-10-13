@@ -85,6 +85,7 @@ La **clave (key)** representa la categoría del objeto (por ejemplo, `amenity`, 
 
 library(tidyverse)
 library(osmdata)
+library(leaflet)
 library(sf)
 
 ```
@@ -137,4 +138,29 @@ leaflet() %>%
 
 # Exportamos los centroides obtenidos como shapefile
 # st_write(hospitales_centroides, "hospitales.shp")
+```
+
+## Crear isocronas con `osrm`
+
+### Una sola
+
+```{r}
+iso <- osrmIsochrone(
+  loc = hospitales_centroides[1,], 
+                breaks = breaks, 
+                res = 50,  
+                osrm.profile = "car")
+
+leaflet() %>% 
+  # Añadir mapa base 
+  addProviderTiles("CartoDB.Positron", 
+                   group="Greyscale") %>% 
+  
+  # Añadir las isocronas
+  addPolygons(data = iso[1,]) %>% 
+  
+  # Añadir el sector censal
+  addCircleMarkers(data = hospitales_centroides[1,], 
+                   color = "green")
+
 ```
