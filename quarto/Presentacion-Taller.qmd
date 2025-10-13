@@ -40,19 +40,13 @@ La accesibilidad se refiere a la relativa facilidad con la que se puede llegar a
 
 El acceso comprende dimensiones espaciales y no espaciales [@beks2023]:
 
-+------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
-| Dimensiones espaciales                                                                                                       | Dimensiones no espaciales                                                                        |
-+==============================================================================================================================+==================================================================================================+
-| Accesibilidad: proximidad de los servicios a los consumidores, teniendo en cuenta la distancia y el tiempo de desplazamiento | Asequibilidad: costo de la atención médica para los proveedores de servicios y los consumidores  |
-+------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
-| Disponibilidad: ubicación y capacidad de los servicios para satisfacer la demanda de los consumidores y la comunidad         | Aceptabilidad: actitudes hacia los servicios desde la perspectiva del proveedor y del consumidor |
-+------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
-|                                                                                                                              | Acomodación: cómo se organizan y estructuran los servicios                                       |
-+------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
-|                                                                                                                              | Concienciación: comunicación sobre los servicios entre proveedores, consumidores y comunidades   |
-+------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
-|                                                                                                                              | Puntualidad: capacidad de prestar el servicio a los consumidores cuando lo necesitan             |
-+------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
+| Dimensiones espaciales | Dimensiones no espaciales |
+|----|----|
+| Accesibilidad: proximidad de los servicios a los consumidores, teniendo en cuenta la distancia y el tiempo de desplazamiento | Asequibilidad: costo de la atención médica para los proveedores de servicios y los consumidores |
+| Disponibilidad: ubicación y capacidad de los servicios para satisfacer la demanda de los consumidores y la comunidad | Aceptabilidad: actitudes hacia los servicios desde la perspectiva del proveedor y del consumidor |
+|  | Acomodación: cómo se organizan y estructuran los servicios |
+|  | Concienciación: comunicación sobre los servicios entre proveedores, consumidores y comunidades |
+|  | Puntualidad: capacidad de prestar el servicio a los consumidores cuando lo necesitan |
 
 # Medidas de acceso espacial
 
@@ -90,21 +84,14 @@ La aplicación de medidas basadas en la distancia requiere hacer suposiciones so
 
 # Tabla de comparación de métodos espaciales
 
-+-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
-| Método                                          | Descripción                                                                                                                         | Ventajas                                                   | Limitaciones                                                     |
-+=================================================+=====================================================================================================================================+============================================================+==================================================================+
-| **1. Proporción entre proveedores y población** | Razón simple entre número de proveedores en un área y la población en esa misma área.                                               | Muy fácil de calcular.                                     | Ignora distancia, movilidad y oferta externa.                    |
-+-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
-| **2. Gravity Model**                            | Calcula la accesibilidad ponderando oferta y demanda según distancia o tiempo, usando una función de impedancia.                    | Considera distancia y competencia por servicios.           | Requiere calibración del parámetro de distancia.                 |
-+-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
-| **3. Two-Step Floating Catchment Area (2SFCA)** | Evalúa cobertura considerando relaciones entre proveedores y población dentro de áreas de captación (buffers).                      | Balancea oferta y demanda local. Sencillo y flexible.      | Usa límites binarios de accesibilidad (dentro/fuera del buffer). |
-+-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
-| **4. Enhanced 2SFCA (E2SFCA)**                  | Variante del 2SFCA que introduce un **decay function** para ponderar la accesibilidad según distancia dentro del área de captación. | Más realista al modelar caída del acceso con la distancia. | Requiere elegir forma y parámetros del decaimiento.              |
-+-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
-| **5. Modified 2SFCA (M2SFCA)**                  | Integra mejoras como buffers múltiples, congestión por demanda y tipos de servicios diferenciados.                                  | Aumenta precisión y especificidad.                         | Más complejo de implementar.                                     |
-+-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
-| **6. Kernel Density 2SFCA (KD2SFCA)**           | Sustituye buffers fijos por una función kernel (suavizado) que modela la influencia de los proveedores de forma continua.           | Más fiel a los patrones reales de accesibilidad.           | Alta carga computacional y parámetros a calibrar.                |
-+-------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+------------------------------------------------------------+------------------------------------------------------------------+
+| Método | Descripción | Ventajas | Limitaciones |
+|----|----|----|----|
+| **1. Proporción entre proveedores y población** | Razón simple entre número de proveedores en un área y la población en esa misma área. | Muy fácil de calcular. | Ignora distancia, movilidad y oferta externa. |
+| **2. Gravity Model** | Calcula la accesibilidad ponderando oferta y demanda según distancia o tiempo, usando una función de impedancia. | Considera distancia y competencia por servicios. | Requiere calibración del parámetro de distancia. |
+| **3. Two-Step Floating Catchment Area (2SFCA)** | Evalúa cobertura considerando relaciones entre proveedores y población dentro de áreas de captación (buffers). | Balancea oferta y demanda local. Sencillo y flexible. | Usa límites binarios de accesibilidad (dentro/fuera del buffer). |
+| **4. Enhanced 2SFCA (E2SFCA)** | Variante del 2SFCA que introduce un **decay function** para ponderar la accesibilidad según distancia dentro del área de captación. | Más realista al modelar caída del acceso con la distancia. | Requiere elegir forma y parámetros del decaimiento. |
+| **5. Modified 2SFCA (M2SFCA)** | Integra mejoras como buffers múltiples, congestión por demanda y tipos de servicios diferenciados. | Aumenta precisión y especificidad. | Más complejo de implementar. |
+| **6. Kernel Density 2SFCA (KD2SFCA)** | Sustituye buffers fijos por una función kernel (suavizado) que modela la influencia de los proveedores de forma continua. | Más fiel a los patrones reales de accesibilidad. | Alta carga computacional y parámetros a calibrar. |
 
 ## Enhanced E2SFCA
 
