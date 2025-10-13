@@ -1,0 +1,182 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+# Modelo gravitacional
+
+-   $S_j$​: número de médicos (o capacidad de atención) del proveedor $j$,
+
+-   $d_{ij}$​: tiempo de viaje entre la zona $i$ y la ubicación del proveedor $j$,
+
+-   $\beta$: coeficiente de la fricción de viaje,
+
+-   $n$: es el número total de ubicaciones de proveedores $$A_i^H=\sum_{j=1}^nS_jd_{ij}^-\beta$$  En el modelo, se considera que un médico cercano es más accesible que uno lejano y, por lo tanto, se le da mayor peso. \# Métodos de áreas de captación flotantes
+
+## El método de área de captación flotante en dos pasos (2SFCA)
+
+**Insumos**
+
+-   **Ubicaciones de la población**
+
+    -   Coordenadas de los centros de población $i$
+    -   Tamaño de la población en cada ubicación $P_i$
+
+-   **Ubicaciones de los proveedores de salud**
+
+    -   Coordenadas de los proveedores $j$.
+    -   Número de médicos o capacidad de cada proveedor $S_j$.
+
+-   **Red de transporte**
+
+    -   Distancia o tiempo de viaje $d_{ij}$​ entre cada población y cada proveedor.
+    -   Umbral de captación $d_0$ (área máxima que cada población puede alcanzar).
+
+**Salidas**
+
+-   **Accesibilidad poblacional** $A_i^F$
+    -   Valor numérico que indica la accesibilidad de la población en la ubicación $i$ a los médicos o servicios de salud.
+-   **Ratios médico-población por área de captación** $R_j$​
+    -   Esto muestra la disponibilidad relativa de médicos dentro de cada catchment.
+
+**Metodología**
+
+Paso 1:
+
+Para cada ubicación de médico $j$, se buscan todas las ubicaciones de población $k$ que estén dentro de un umbral de tiempo de viaje $d_{0}$ desde la ubicación $j$ (esto constituye el área de captación del médico $j$, o captación $j$).
+
+Luego, se calcula la razón médico–población $R_{j}$ dentro de dicha área de captación:
+
+$$R_{j} = \frac{S_{j}}{\sum_{k \{d_{kj}\leq d_0\}}P_k}$$ Donde $P_k$ es la población en la ubicación $k$ cuyo centroide se encuentra dentro del área de cobertura $j$ ($d_{kj} \leq d_0$), $S_j$ es el número de médicos en la ubicación $j$, y $d_{kj}$ es el tiempo de viaje entre $k$ y $j$.
+
+Paso 2:
+
+Para cada ubicación de la población $i$, se buscan todas las ubicaciones de los médicos ($j$) que se encuentren dentro del tiempo de viaje umbral ($d_0$) desde la ubicación $i$ (es decir, el área de cobertura $i$), y se suman las razones médico-población ($R_j$, derivadas en el paso 1) e
+
+$$
+A_i^F = \sum_{j \in \{ d_{ij} \leq d_0 \}} R_j 
+       = \sum_{j \in \{ d_{ij} \leq d_0 \}} 
+         \frac{S_j}{\sum_{k \in \{ d_{ij} \leq d_0 \}} P_k}
+$$
+
+donde $A_i^F$ representa la accesibilidad de la población en la ubicación $i$ a los médicos, basada en el método de área de captación flotante en dos pasos; $R_j$ es la razón médico-población en la ubicación del médico $j$, cuyo centroide se encuentra dentro del área de captación centrada en la ubicación de la población $i$ (es decir, $(d_{ij} \leq d_0)$; y $d_{ij}$ es el tiempo de viaje entre $i$ y $j$.
+
+El primer paso asigna una razón inicial a cada área de captación (o área de servicio) centrada en las ubicaciones de los médicos, y el segundo paso suma las razones iniciales en las áreas de servicio superpuestas donde los residentes tienen acceso a múltiples ubicaciones de médicos.
+
+## Enhanced E2SFCA
+
+**Insumos**
+
+### 1. Datos de la Demanda (Población)
+
+-   **Población por Ubicación de Origen (**$Pk$​): Un conteo de la población en cada área de origen, como celdas de cuadrícula o bloques censales. Esto representa a las personas que necesitan el servicio.
+
+-   **Ubicaciones de Origen**: Las coordenadas geográficas (latitud, longitud) de cada centro de población o el punto central de cada celda de cuadrícula.
+
+------------------------------------------------------------------------
+
+### 2. Datos de la Oferta (Servicios)
+
+-   **Capacidad del Servicio (**$Sj$​): Una medida del tamaño o capacidad del servicio en cada ubicación. En el contexto médico, esto podría ser el número de médicos, camas de hospital, o la cantidad de horas de servicio disponibles.
+
+-   **Ubicaciones de los Servicios**: Las coordenadas geográficas (latitud, longitud) de cada punto de servicio, como una clínica o un hospital.
+
+------------------------------------------------------------------------
+
+### 3. Datos de Distancia/Tiempo de Viaje
+
+-   **Matriz de Tiempo de Viaje (**$d_{kj}​, d_{ij}$​): Los tiempos de viaje entre todas las ubicaciones de origen y todas las ubicaciones de servicio. Estos se pueden calcular utilizando herramientas de enrutamiento (como Google Maps API, o software de GIS) y representan la "fricción de la distancia" que las personas experimentan para acceder a los servicios.
+
+------------------------------------------------------------------------
+
+### 4. Parámetros del Modelo E2SFCA
+
+-   **Umbral de Tiempo de Viaje (**$Dr​$): Un conjunto de umbrales de tiempo de viaje (por ejemplo, 10, 20 y 30 minutos) que definen las zonas de accesibilidad. Estos se utilizan para agrupar los viajes en diferentes "cubetas" o zonas.
+
+-   **Ponderaciones de Distancia (**$Wr$​): Un conjunto de ponderaciones que disminuyen con la distancia, generalmente calculadas con una **función gaussiana**. Estas ponderaciones reflejan que la accesibilidad es mayor para distancias más cortas y disminuye gradualmente a medida que la distancia aumenta.
+
+**Salidas**
+
+-   **Accesibilidad poblacional** $A_i^F$
+    -   Valor numérico que indica la accesibilidad de la población en la ubicación $i$ a los médicos o servicios de salud.
+-   **Ratios médico-población por área de captación** $R_j$​
+    -   Esto muestra la disponibilidad relativa de médicos dentro de cada catchment.
+
+**Metodología**
+
+Paso 1:
+
+La zona de influencia de la ubicación del médico $j$ se define como el área dentro de una zona de conducción de 30 minutos (Lee, 1991). Dentro de cada zona de influencia, se calculan tres zonas de tiempo de viaje con intervalos de minutos de 0-10, 10-20 y 20-30 minutos (zonas 1-3, respectivamente). Se buscan todas las ubicaciones de la población ($k$) que se encuentran dentro de una zona de tiempo de viaje umbral ($D_r$) desde la ubicación $j$ (esta es la zona de influencia $j$), y se calcula la relación ponderada de médico a población, $R_j$, dentro de la zona de influencia de la siguiente manera:
+
+$$
+R_j = \frac{S_j}{\sum_{k\in\{d_{kj}\in D_r\}} P_k W_r} \\ = \frac{S_j}{\sum_{k\in\{d_{kj}\in D_1\}} P_k W_1 + \sum_{k\in\{d_{kj}\in D_2\}} P_k W_2 + \sum_{k\in\{d_{kj}\in D_3\}} P_k W_3}$$
+
+Sonde $P_k$ es la población de la celda de la cuadrícula $k$ que cae dentro de la zona de influencia $j$ ($d_{kj} \in D_r$), $S_j$ el número de médicos en la ubicación $j$, $d_{kj}$ el tiempo de viaje entre $k$ y $j$, y $D_r$ la zona de tiempo de viaje $r$ ($r=1-3$) dentro de la zona de influencia. $W_r$ es la ponderación de distancia para la zona de tiempo de viaje $r$ calculada a partir de la función gaussiana, que captura el deterioro de la accesibilidad al médico $j$ con la distancia.
+
+Paso 2:
+
+Para cada ubicación de población $i$, se buscan todas las ubicaciones de médicos ($j$) que se encuentran dentro de una zona de tiempo de viaje de 30 minutos desde la ubicación $i$ (es decir, la zona de influencia $i$), y se suman las relaciones de médico a población (calculadas en el paso 1), $R_j$, en estas ubicaciones de la siguiente manera:
+
+$$
+A_i^F = \sum_{j\in\{d_{ij}\in D_r\}} R_j W_r \\
+= \sum_{j\in\{d_{ij}\in D_1\}} R_j W_1 + \sum_{j\in\{d_{ij}\in D_2\}} R_j W_2 + \sum_{j\in\{d_{ij}\in D_3\}} R_j W_3
+$$
+
+Donde $A_i^F$ representa la accesibilidad de la población en la ubicación $i$ a los médicos, $R_j$ la relación médico-población en la ubicación del médico $j$ que cae dentro de la zona de influencia centrada en la población $i$ (es decir, $d_{kj} \in D_r$), y $d_{ij}$ el tiempo de viaje entre $i$ y $j$. Las mismas ponderaciones de distancia derivadas de la función gaussiana utilizadas en el paso 1 se aplican a diferentes zonas de tiempo de viaje para tener en cuenta la disminución del acceso con la distancia.
+
+## KD2SFCA
+
+**Insumos** \### 1. Parámetros del Modelo
+
+-   **Radio de Búsqueda (d0​)**: Un umbral de tiempo de viaje (por ejemplo, 30 minutos) que define el radio máximo de las áreas de influencia flotantes.
+
+-   **Función de Decaimiento de la Distancia**: La principal diferencia del KD2SFCA. A diferencia del E2SFCA que usa una función escalonada, el KD2SFCA utiliza una **función de densidad de kernel** continua (como la función gaussiana) para ponderar las interacciones entre la demanda y la oferta. Esta función elimina la dicotomía de "dentro o fuera" del radio de búsqueda, permitiendo que la accesibilidad decaiga de manera suave a medida que aumenta la distancia.
+
+**Metodología**
+
+El método KD2SFCA incluye una función en cada uno de los pasos del método original 2SFCA para modelar la disminución de la accesibilidad con la distancia entre los residentes y los proveedores, y es capaz de tener en cuenta la proximidad variable dentro de las áreas de influencia (Dai y Wang, 2011). La función reescala las poblaciones según su tiempo de viaje a cada punto de oferta y reescala las razones de oferta-a-demanda del paso 1 según el tiempo de viaje de cada población a sus puntos de oferta disponibles correspondientes.
+
+La Ecuación (3) resume ambos pasos del método KD2SFCA: $$
+A_i^K = \sum_{l\in\{d_{il}\le d_{\text{max}}\}} \frac{S_l f(d_{il}, d_{\text{max}})}{\sum_{k\in\{d_{kl}\le d_{\text{max}}\}} P_k f(d_{kl}, d_{\text{max}})}
+$$ donde $f(d_{il}, d_{\text{max}})$ y $f(d_{kl}, d_{\text{max}})$ se refieren a la función de decaimiento de la distancia, y las otras variables son aproximadamente similares a las de las ecuaciones (1) y (2).
+
+La función elegida por Dai y Wang (2011) es la función Epanechnikov, que es una función predeterminada de la aplicación de sistema de información geográfica que los autores utilizaron (ArcGIS): \$\$ f(d\_{ij}, d\_{\text{max}}) =
+
+\frac{3}{4}\left[1 - \left(\frac{d_{ij}}{d_{\text{max}}}\right)^2\right], \text{si } d\_{ij} \le d\_{\text{max}} \\ 0, \text{si } d\_{ij} \> d\_{\text{max}} \$\$
+
+# Modified M2SFCA
+
+Paso 1: Cálculo del Ratio de Oferta a Demanda Ponderado
+
+Este paso es similar al del E2SFCA, donde se calcula la relación entre la oferta de servicios ($S_j$​) y la demanda de la población ($Pk$​) dentro de un área de influencia. Sin embargo, el M2SFCA añade una función de decaimiento de la distancia ($f(d_kj​)$) en el numerador para reflejar que la oferta disminuye con la distancia. La fórmula es:
+
+$$R_j = \frac{S_j f(d_{kj})}{\sum_{k \in \{d_{kj} \le d_0\}} P_k f(d_{kj})}$$
+
+-   Rj​: La relación ponderada de oferta a demanda en la ubicación del proveedor j.
+
+-   Sj​: La capacidad de servicio del proveedor j.
+
+-   Pk​: La población en la ubicación de demanda k.
+
+-   dkj​: La distancia entre el proveedor j y la población k.
+
+-   f(dkj​): Una función de decaimiento de la distancia que pondera la interacción según la distancia. Las poblaciones más cercanas tienen una mayor interacción.
+
+-   d0​: El umbral de distancia o tiempo de viaje máximo.
+
+Paso 2: Cálculo de la Accesibilidad de la Población
+
+$$A_i = \sum_{j \in \{d_{ij} \le d_0\}} R_j \frac{f(d_{ij})}{ \sum_{l \in \{d_{il} \le d_0\}} f(d_{il}) }$$
+
+En este paso, se calcula la accesibilidad total (Ai​) para cada ubicación de la población i. A diferencia del E2SFCA que simplemente suma los valores Rj​ de todos los proveedores dentro de un radio fijo, el M2SFCA introduce una ponderación adicional para reflejar la competencia entre proveedores. En lugar de un umbral fijo, se considera que la competencia entre proveedores en un área determinada se reduce a medida que la población se aleja de ellos.
+
+-   Ai​: La accesibilidad de la población en la ubicación i.
+
+-   Rj​: El valor de la relación oferta-demanda del proveedor j, calculado en el paso 1.
+
+-   dij​: La distancia entre la población i y el proveedor j.
+
+-   f(dij​): La misma función de decaimiento de la distancia que se utiliza en el paso 1.
+
+-   El denominador ∑l∈{dil​≤d0​}​f(dil​) es la suma de las ponderaciones de distancia de todos los proveedores (l) que están dentro del área de influencia de la población i. Esta normalización esencialmente ajusta la accesibilidad del proveedor j para la población i en función de la presencia de otros proveedores cercanos, lo que refleja la competencia.
