@@ -47,7 +47,7 @@ El paper no debe ser solo descriptivo. Debe:
 
 ## FASE 1 — Consolidación conceptual y metodológica
 
-**(Semanas 1–3)**
+**(Semanas 1–4)**
 
 ### Objetivo:
 
@@ -66,8 +66,8 @@ Cerrar completamente el diseño conceptual y metodológico.
   * Planteamiento de contribución científica clara
 * Delimitar:
 
-  * Nivel geográfico definitivo
-  * Periodos temporales
+  * Nivel geográfico definitivo Quito
+  * Periodos temporales (Dias normales, fines de semana, feriados)
   
   
 ##### Guía
