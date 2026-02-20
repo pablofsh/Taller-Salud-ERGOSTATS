@@ -14,7 +14,27 @@ El presente artículo mide la brecha territorial en el acceso a los servicios de
 Empezamos con un reconocimiento del mandato constitucional ecuatoriano de garantizar el derecho a la salud en condiciones de equidad territorial. Sin embargo, la organización actual del Sistema Nacional de Salud (SNS) –basada en distritos y circuitos– no refleja plenamente los patrones reales de movilidad de la población. El objetivo de este estudio es **desarrollar y validar** un indicador sintético de accesibilidad que permita evidenciar tales disparidades y proveer insumos para la toma de decisiones.
 
 ## 1.1 El Sistema Nacional de Salud en Ecuador  
-El SNS se estructura en **tres niveles de atención**, definidos por complejidad y cartera de servicios:
+
+Los planificación del Sistema Nacional de Salud en Ecuador obedece a las directrices establecidas en el Plan Nacional de Desarrollo. Si bien estas directrices han cambiaddo constantemente de nombre en el tiempo, estas mantienen una estructura organizada para consolidar un estado que apunte hacía una gestión democrática y centrada en el ser humano de los distintos servicios ppúblicos. En esta linea el Plan Nacional del Buen Vivir 2013-2017 abordaba estas directrices bajo un enfoque de acción colectiva donde los distintos actores del estado tenían un rol establecido y articulado con el resto. Es así que este instrumento de planificación, desarrollado en ese entonces, tenia como objetivo la descentralizacion y desconcenttración de los servicios valiendose de los gobiernos autonomos descentralizados en orden con lo establecido en la constitución reformada en el año 2008. 
+
+La desconcentración se da cuando las atribuciones de una entidad administrativa del nivel nacional son transferidos a otra jerárquicamente dependiente (nivel zonal, distrital, circuital), siendo la primera la que mantiene la rectoría y asegura su calidad y rectoria. Los niveles de desconcentración están orientados hacia uno de los mayores problemas para la gestión y la prestación de servicios públicos en el territorio,
+como es la brecha de concentración del poder y los servicios en polos de desarrollo.
+
+En se sentido para los distintos servicios públicos, entre ellos el acceso a salid, el Plan Nacional de Desarrollo, propuso una **planificación intersectorial** que considera las características particulares de cada territorio, en consideración de **variables geográficas, sociales y sectoriales** para determinar **áreas óptimas referenciales** donde se pueda construir infraestructura idónea para la prestación de servicios. 
+
+
+Los niveles administrativos de planificación son:
+
+*   **Zonas Administrativas de Planificación:** Son el nivel donde se realiza la **coordinación estratégica** de las entidades del sector público, a través de la planificación y gestión de políticas en su jurisdicción. Se conforman agrupando provincias por proximidad geográfica, cultural y económica, y se definieron **nueve zonas** en el país. Cada zona está compuesta por distritos y, a su vez, por circuitos.
+*   **Distritos Administrativos de Planificación:** Constituyen las **unidades territoriales básicas para la prestación de servicios públicos**. Coinciden con el cantón o la unión de cantones y su función es articular las políticas de desarrollo territorial, coordinando la provisión de servicios para el ejercicio de derechos y garantías ciudadanas. Se definieron **140 distritos** a nivel nacional.
+*   **Circuitos Administrativos de Planificación:** Son las **unidades territoriales locales y básicas de prestación de servicios**. Están conformados por un conjunto de establecimientos dedicados a la prestación de servicios públicos en un territorio específico dentro de un distrito, articulados entre sí por los servicios que ofrecen. Existen **1134 circuitos** en el país.
+
+El objetivo central de esta organización territorial es **garantizar los derechos de las y los ecuatorianos mediante una prestación eficiente y cálida de los servicios públicos**, acercando el Estado a la ciudadanía y construyendo **equidad territorial** a través de una presencia equilibrada de las instituciones públicas. Para identificar las áreas óptimas, la guía emplea un **método de análisis espacial multicriterio** que integra variables como accesibilidad vial, uso del suelo y susceptibilidad a peligros naturales, entre otras.
+
+Ministerios clave como el de Salud Pública (MSP), Educación (MINEDUC), Inclusión Económica y Social (MIES), del Interior (MDI) y de Justicia, Derechos Humanos y Cultos (MJDHC), junto con la Secretaría de Gestión de Riesgos (SGR), participan activamente en la planificación y prestación de servicios en estos niveles administrativos.
+
+
+A su vez el SNS se estructura en **tres niveles de atención**, definidos por complejidad y cartera de servicios:
 
 1. **Primer nivel (Atención Primaria).**  
    Puntos de contacto más cercanos a la comunidad: puestos de salud rurales, consultorios generales y centros de salud tipo A, B y C. Su función es prevenir la enfermedad, promocionar la salud y resolver hasta el 80 % de la demanda ambulatoria mediante equipos multidisciplinarios de medicina familiar y comunitaria.
@@ -24,6 +44,19 @@ El SNS se estructura en **tres niveles de atención**, definidos por complejidad
 
 3. **Tercer nivel (Alta Complejidad).**  
    Hospitales de especialidades y de referencia nacional con servicios de alta tecnología, UCI y sub-especialidades quirúrgicas. Actúan como respaldo de la red y concentran la investigación clínica y la formación de recursos humanos de mayor calificación.
+
+#### Planificación con orden espacial
+
+La metodología está diseñada con el objeto de identificar áreas óptimas referenciales para la ubicación de los establecimientos prestadores de servicio. El diseño metodológico se basa en cuatro fases:
+- Primera fase. Caracterización territorial
+- Segunda fase. Caracterización sectorial
+- Tercera fase. Distribución espacial referencial
+- Cuarta fase. Ubicación de los establecimientos prestadores de servicios
+
+![](access_vial.png)
+![](uso_cobertura.png)
+![](sucep_riesgos.png)
+
 
 ### Enfoque de capacidad efectiva (Amartya Sen) aplicado al SNS  
 El economista **Amartya Sen** propone evaluar el desarrollo en términos de **capacidades** –las “oportunidades reales” que tienen las personas para llevar una vida valiosa– más que en términos de insumos o bienes disponibles. Trasladado al ámbito de la salud, el acceso no se agota en la existencia física de establecimientos; depende de la **posibilidad real** de utilizarlos de manera oportuna y adecuada.  

@@ -1,0 +1,301 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+
+# PLAN DE INVESTIGACIÓN
+
+## Objetivo: Paper casi listo para envío (mid-May)
+
+**Enfoque del paper (definitivo):**
+Proponer, construir y validar un **Índice de Accesibilidad a Servicios de Salud** como herramienta operativa de planificación pública, integrando:
+
+* Oferta física de servicios
+* Actividad económica de unidades de salud
+* Demanda potencial (población y estructura etaria)
+* Dimensión territorial explícita
+* Validación empírica con variables observables
+
+El paper no debe ser solo descriptivo. Debe:
+
+1. Proponer una herramienta replicable.
+2. Mostrar que agrega valor frente a métricas tradicionales.
+3. Ser útil para decisiones reales.
+
+---
+
+# ESTRUCTURA META DEL PAPER (que debemos completar)
+
+1. Introducción
+2. Literature Review
+3. Data
+4. Methodology
+
+   * Construcción del índice
+   * Escenarios temporales
+   * Validación
+5. Results
+6. Policy Implications
+7. Robustness checks
+8. Conclusion
+
+---
+
+# CRONOGRAMA GENERAL (Febrero – Mediados de Mayo)
+
+## FASE 1 — Consolidación conceptual y metodológica
+
+**(Semanas 1–4)**
+
+### Objetivo:
+
+Cerrar completamente el diseño conceptual y metodológico.
+
+### Alex
+
+* Definir formalmente:
+
+  * Marco conceptual del índice
+  * Relación entre accesibilidad física y actividad económica (SRI)
+  * Qué hipótesis explícitas va a probar el paper
+* Escribir:
+
+  * Borrador casi final de Introducción
+  * Planteamiento de contribución científica clara
+* Delimitar:
+
+  * Nivel geográfico definitivo Quito
+  * Periodos temporales (Dias normales, fines de semana, feriados)
+  
+  
+##### Guía
+
+#####
+  
+Preguntas:
+
+- ¿Qué problema exacto resolvemos?
+- ¿Por qué los indicadores tradicionales son insuficientes?
+- ¿Qué mejora concreta aporta nuestro índice?
+- ¿Qué decisión de política no podría tomarse sin esta herramienta?
+
+Hipotesis:
+
+- H1: El índice de accesibilidad propuesto presenta mayor capacidad explicativa de la actividad económica de las unidades de salud que las métricas tradicionales basadas en densidad per cápita.
+- H2: Existen unidades territoriales con accesibilidad estructuralmente baja aun cuando presentan crecimiento poblacional positivo.
+- H3: La distribución de actividad económica no es proporcional a la accesibilidad territorial.
+
+### Pablo
+
+* Formalizar:
+
+  * Método exacto de cálculo del índice (two-step floating catchment area? gravity-based? híbrido?)
+  * Justificación técnica de la elección
+* Diseñar:
+
+  * Escenarios temporales (hora pico vs hora valle)
+  * Sensibilidad a radio de cobertura
+
+### Lectura obligatoria (ambos)
+
+* Artículos Q1 sobre:
+
+  * Spatial accessibility to healthcare
+  * Gravity models in health planning
+  * Two-step floating catchment area (2SFCA) methods
+  * Spatial health inequalities
+  * Market dynamics in healthcare provision
+  
+  
+#### Guía
+
+Debes decidir y justificar:
+
+- ¿Es 2SFCA?
+- ¿Es gravity-based?
+- ¿Es híbrido?
+- ¿Qué función de decaimiento usamos?
+- ¿Qué parámetro de distancia?
+- ¿Qué unidad territorial?
+
+Producto esperado:
+
+- Fórmula matemática formal del índice.
+- Definición clara de cada componente.
+- Supuestos explícitos.
+
+Necesitamos benchmark.
+
+Proponer al menos 2:
+
+- Densidad simple per cápita.
+- Índice sin componente económico.
+- Distancia promedio al centro más cercano.
+
+Necesitamos identificar:
+
+* Qué ya está hecho.
+* Dónde está el vacío.
+* Qué aportamos que no existe.
+
+
+
+
+
+---
+
+## FASE 2 — Datos y validación empírica
+
+**(Semanas 4–7)**
+
+Esta fase es crítica para Q1.
+
+### Alex
+
+* Diseñar estrategia de validación económica:
+
+  * Correlación entre accesibilidad e:
+
+    * Actividad económica de unidades
+    * Ingresos tributarios agregados
+    * Crecimiento poblacional
+* Diseñar variable proxy de “dinámica de mercado”.
+* Definir tests econométricos:
+
+  * Modelos espaciales (SAR/SEM si aplica)
+  * Regresiones con efectos espaciales
+
+### Pablo
+
+* Implementar:
+
+  * Cálculo del índice completo
+  * Mapas de resultados
+  * Identificación de clusters
+* Generar:
+
+  * Comparación con indicador simple (por ejemplo, densidad per cápita)
+  * Métrica alternativa para contrastar
+
+### Ambos
+
+Construir sección de:
+
+* Data
+* Variables
+* Descripción estadística
+
+---
+
+## FASE 3 — Robustez y profundidad técnica
+
+**(Semanas 8–10)**
+
+Aquí es donde se gana la Q1.
+
+### Robustez mínima necesaria:
+
+1. Sensibilidad a:
+
+   * Radios de influencia
+   * Ponderadores poblacionales
+   * Métrica de distancia (tiempo vs distancia)
+
+2. Comparación contra:
+
+   * Métrica tradicional (ej. médicos por 10,000 hab.)
+   * Índice sin componente económico
+
+3. Perfiles temporales:
+
+   * Hora pico vs hora valle
+   * Cambios en accesibilidad efectiva
+
+### Alex
+
+* Redactar sección econométrica.
+* Interpretación profunda de resultados.
+* Enlace con política pública.
+
+### Pablo
+
+* Tests espaciales.
+* Validación cartográfica.
+* Visualizaciones finales publicables.
+
+---
+
+## FASE 4 — Redacción final y posicionamiento Q1
+
+**(Semanas 11–12)**
+
+### Alex
+
+* Redactar:
+
+  * Policy implications con fuerza técnica
+  * Conclusión con aporte metodológico
+* Identificar 3–4 journals Q1 objetivo.
+* Ajustar paper a lineamientos de uno específico.
+
+### Pablo
+
+* Refinar:
+
+  * Figuras publicables
+  * Mapas con estándares internacionales
+  * Reproducibilidad
+
+### Ambos
+
+* Revisión cruzada fuerte.
+* Chequeo de coherencia narrativa.
+* Eliminación de partes débiles.
+
+---
+
+# LO QUE DEBEMOS COMPLETAR 
+
+### Conceptual
+
+* Hipótesis explícitas.
+* Marco teórico claro.
+* Justificación del índice frente a métodos existentes.
+
+### Metodológico
+
+* Fórmula final del índice.
+* Justificación de cada parámetro.
+* Tratamiento espacial formal.
+
+### Empírico
+
+* Validación contra:
+
+  * Actividad económica.
+  * Distribución poblacional.
+  * Alternativas tradicionales.
+
+### Política pública
+
+* ¿Cómo usaría esto un planificador?
+* ¿Cómo identificaría ubicación óptima de nuevos hospitales?
+* ¿Qué cambia si se usa este índice?
+
+
+
+> # LO QUE DEBEMOS LEER
+1. Health accessibility spatial modeling Q1 papers.
+2. Gravity-based accessibility in urban planning.
+3. Market-based health service distribution.
+4. Spatial econometrics in health economics.
+5. Policy-oriented spatial tools.
+
+>Lectura estratégica para responder:
+* ¿Qué vacíos dejan?
+* ¿Qué crítica metodológica podemos hacer?
+* ¿Qué mejora concreta introducimos?
+
+
