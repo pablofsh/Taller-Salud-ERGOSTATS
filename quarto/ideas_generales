@@ -1,0 +1,85 @@
+
+
+El marco estándar separa:
+
+Uso de suelo / oportunidades (cantidad–calidad–distribución espacial de actividades)
+
+Sistema de transporte (red, tiempos, confiabilidad)
+
+Temporalidad (hora pico vs valle; variabilidad)
+
+Individuos/proveedores de salud (restricciones, preferencias, competencia por oportunidades) 
+
+
+
+Criterios de calidad del índice
+
+Interpretabilidad para policy (qué significa +10% en el índice local)
+
+
+
+Sensibilidad temporal (perfiles “hora pico vs hora tipo”)
+
+Robustez a especificación (umbrales, decaimiento, definición de oportunidades)
+
+Transparencia/reproducibilidad (insumos abiertos, pipeline replicable) 
+
+
+
+Papers 
+
+Hansen (1959) como origen del concepto de accesibilidad “potencial de interacción” . 
+
+Geurs & van Wee (2004): revisión canónica y criterios para evaluar medidas 
+
+Geurs (y coautores), “Accessibility: perspectives, measures and applications”: marco por componentes  
+
+Mazzulla et al. (2024): revisión reciente y clasificación conceptual 
+
+OECD/ITF sobre accesibilidad para appraisal y planificación con índices 
+
+
+
+
+
+Mecanismos teóricos 
+
+Accesibilidad como reducción de costos generalizados: menor tiempo/costo a y proveedores de salud significa expansión del mercado efectivo con lo que se tienen más ventas/formalidad. 
+
+Productividad y matching: mejor accesibilidad mejora emparejamiento laboral/cliente–proveedor y puede reflejarse en productividad/ingresos y dinámica espacial de los negocios. 
+
+Efectos de aglomeración: accesibilidad refuerza densidad económica (más interacción, derrames de conocimiento). El “índice” se vuelve proxy de exposición a aglomeración, útil en planificación territorial . 
+
+ 
+
+
+Hipótesis (signo esperado +)
+
+1. H1 (nivel): sectores censales con mayor accesibilidad (en tiempo) a oportunidades económicas presentan mayor actividad económica formal medida por SRI (p.ej., ventas/IVA/ingreso imponible per cápita o por establecimiento).
+
+
+2. H2 (heterogeneidad temporal): el efecto es más fuerte con accesibilidad en hora pico (o perfiles horarios) que con “hora promedio”, porque refleja congestión y fricción real de interacción. 
+
+
+3. H3 (no linealidad/umbrales): el retorno marginal de accesibilidad es decreciente (o existe umbral) — consistente con economías de aglomeración y saturación.
+
+
+4. H4 (heterogeneidad espacial/sectorial): el vínculo es más fuerte en sectores “dependientes de interacción/presencia” (comercio/servicios) que en sectores menos sensibles (ciertas manufacturas), usando clasificación CIIU/SRI.
+
+
+5. H5 (equidad territorial): mejoras en accesibilidad reducen brechas espaciales de actividad formal (convergencia), o alternativamente las amplían si el beneficio se concentra en nodos (hipótesis competitiva).
+
+
+
+Hipótesis de validez/robustez 
+
+6. H6 (robustez a medida): los resultados se sostienen al comparar al menos dos familias de accesibilidad (p.ej., cumulativa vs gravitacional). 
+
+
+7. H7 (dependencia espacial): existe autocorrelación espacial residual; modelos espaciales (SAR/SEM/SDM) mejoran ajuste e interpretabilidad del spillover. (Esto se alinea con “planificación territorial inteligente”: políticas en una parroquia urbana/sector censal afectan vecinos).
+
+
+
+
+ 
+
