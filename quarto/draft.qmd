@@ -15,7 +15,7 @@ Empezamos con un reconocimiento del mandato constitucional ecuatoriano de garant
 
 ## 1.1 El Sistema Nacional de Salud en Ecuador  
 
-Los planificación del Sistema Nacional de Salud en Ecuador obedece a las directrices establecidas en el Plan Nacional de Desarrollo. Si bien estas directrices han cambiaddo constantemente de nombre en el tiempo, estas mantienen una estructura organizada para consolidar un estado que apunte hacía una gestión democrática y centrada en el ser humano de los distintos servicios ppúblicos. En esta linea el Plan Nacional del Buen Vivir 2013-2017 abordaba estas directrices bajo un enfoque de acción colectiva donde los distintos actores del estado tenían un rol establecido y articulado con el resto. Es así que este instrumento de planificación, desarrollado en ese entonces, tenia como objetivo la descentralizacion y desconcenttración de los servicios valiendose de los gobiernos autonomos descentralizados en orden con lo establecido en la constitución reformada en el año 2008. 
+Los planificación del Sistema Nacional de Salud en Ecuador obedece a las directrices establecidas en el Plan Nacional de Desarrollo. Si bien estas directrices han cambiaddo constantemente de nombre en el tiempo, estas mantienen una estructura organizada para consolidar un estado que apunte hacía una gestión democrática y centrada en el ser humano de los distintos servicios públicos. En esta linea el Plan Nacional del Buen Vivir 2013-2017 abordaba estas directrices bajo un enfoque de acción colectiva donde los distintos actores del estado tenían un rol establecido y articulado con el resto. Es así que este instrumento de planificación, desarrollado en ese entonces, tenia como objetivo la descentralizacion y desconcentración de los servicios valiendose de los gobiernos autonomos descentralizados en orden con lo establecido en la constitución reformada en el año 2008. 
 
 La desconcentración se da cuando las atribuciones de una entidad administrativa del nivel nacional son transferidos a otra jerárquicamente dependiente (nivel zonal, distrital, circuital), siendo la primera la que mantiene la rectoría y asegura su calidad y rectoria. Los niveles de desconcentración están orientados hacia uno de los mayores problemas para la gestión y la prestación de servicios públicos en el territorio,
 como es la brecha de concentración del poder y los servicios en polos de desarrollo.
@@ -57,21 +57,72 @@ La metodología está diseñada con el objeto de identificar áreas óptimas ref
 ![](uso_cobertura.png)
 ![](sucep_riesgos.png)
 
-
-### Enfoque de capacidad efectiva (Amartya Sen) aplicado al SNS  
-El economista **Amartya Sen** propone evaluar el desarrollo en términos de **capacidades** –las “oportunidades reales” que tienen las personas para llevar una vida valiosa– más que en términos de insumos o bienes disponibles. Trasladado al ámbito de la salud, el acceso no se agota en la existencia física de establecimientos; depende de la **posibilidad real** de utilizarlos de manera oportuna y adecuada.  
-- **Funcionamiento:** recibir atención apropiada en el momento necesario.  
-- **Capacidad:** contar con tiempo-distancia razonables, medios de transporte y ausencia de barreras económicas o culturales.  
-
-El IAESS opera justamente como **medida intermedia de capacidad**, cuantificando las oportunidades efectivas de la población para alcanzar niveles 1-3 del SNS dentro de los umbrales aceptables (0-10 min y 10-20 min). Su eventual inclusión en RAS y Censo dotaría al país de un indicador oficial alineado al marco de capacidades, con potencial para monitorear la realización progresiva del derecho a la salud.
+Pese a este desarrollo metodológico aun persiste una pregunta por responder ¿es la ausencia de unidades de salud el problema a atender para garantizar que la población tenga una atención adecuada en términos de salud? La literatura reciente distingue entre acceso potencial (qué tan cerca está un servicio) y acceso revelado (si la población efectivamente lo usa), y demuestra que los indicadores basados en límites administrativos no capturan ninguno de los dos con precisión. La diferencia entre accesibilidad potencial y revelada es crítica para los tomadores de decisiones que deben asignar recursos de salud y transporte bajo condiciones normales y de crisis. (Revealed versus potential spatial accessibility of healthcare and changing patterns during the COVID-19 pandemic
+Kristina Gligorić 1,2,#, Chaitanya Kamath 1,#, Daniel J Weiss 3,4,#, Shailesh Bavadekar 1, Yun Liu 1, Tomer Shekel 1, Kevin Schulman 5, Evgeniy Gabrilovich 1,✉) 
+Evidencia de ello es una cifra alarmante, más del 30% de la población rural enfrenta dificultades para acceder a servicios de salud oportunos y resolutivos (PAHO/CEPAL (2024) — brecha rural en América Latina), pese a que esta cifra agrega territorios muy distintos bajo el mismo número, es un indicio de la profunda necesidad de generar no solo datos agregados, sino la capacidad de identificar qué zonas específicas (y sus componentes) tienen un déficit de acceso que no es visible si uno solo mira cuántos hospitales hay por unidad administrativa geográfica (DPA). En nuestra investigación nos delimitamos a trabajar con la provincia de Pichincha dado que en este caso una sola provincia constituye la zona 9 dentro de la planificacipón territorial establecida en los documentos de planificación estatal. Las ventajas de tomar una zona completa radican en la delimitación espacial en la cual se dan los mecanismos de derivacaciones entre los distintos distritos y ciruitos dentro de una sola zona de de planificación. Adicional a ello garantizamos que la demanda dentro de la zona 9 sea local, es decir que el flujo de pacientes que requieren atención primaria de slaud es en su mayoria de residentes de las distintas parroquias que componen a la provincia de pichincha, con lo que el efecto que tienen los pacientes de fuera de esta zona será minimizado con lo cual la dinámica de pacientes y doctores en una sola zona sea comprendida. 
 
 
+El deafio de medir la accesibilidad no es solo metodológico — es conceptual. Contar médicos por distrito o establecimientos por cantón responde a la pregunta equivocada: ¿cuánto hay? en lugar de ¿cuánto puede usar efectivamente la población?
 
----
+Amartya Sen propone evaluar el desarrollo en términos de capacidades — las oportunidades reales que tienen las personas para llevar una vida valiosa — y no en términos de bienes o insumos disponibles. Trasladado al ámbito de la salud, este marco implica que el acceso no se agota en la existencia física de un establecimiento. Depende de la posibilidad real de utilizarlo de manera oportuna y adecuada: contar con tiempo-distancia razonables, medios de transporte y ausencia de barreras económicas o culturales. Un hospital que existe pero que está a 45 minutos de viaje para una madre con tres hijos y sin vehículo no representa una capacidad real — representa un insumo estadísticamente registrado pero funcionalmente inaccesible.
+
+Este argumento tiene respaldo empírico directo. Un modelo de red espacial basado en SIG para evaluar la accesibilidad hospitalaria, integrar características viales y estimar tiempos de viaje revela brechas significativas que afectan desproporcionadamente a poblaciones vulnerables y remotas Nature — brechas que simplemente no aparecen cuando el análisis se hace con razones proveedor-población o buffers de distancia euclidiana.
+
+Sen (1999) — Development as Freedom, fundamento del enfoque de capacidades
+
+### Politica pública inteligente
+
+Sin una métrica adecuada,  tres decisiones de política quedan ciegas: (a) dónde construir nueva infraestructura de salud, (b) qué zonas priorizar en redistribución de personal médico, y (c) cómo evaluar si el crecimiento poblacional en zonas periféricas está siendo acompañado por la oferta de servicios.
+
+La primera decisión es la de localización de nuevas unidades. Los hallazgos pueden asistir al gobierno en planificación urbana y formulación de políticas basadas en evidencia: en el corto plazo se sugiere añadir nuevos centros de salud priorizando las áreas de baja accesibilidad identificadas Wiley Online Library. Esta recomendación solo es posible si se tiene un mapa de accesibilidad desagregado a nivel censal; con un indicador distrital, la decisión sería arbitraria o políticamente motivada.
+
+La segunda decisión es la redistribución de recursos humanos. Tomadores de decisiones y gestores locales podrían identificar áreas donde camas adicionales o profesionales de salud deberían ser asignados como prioridad. PubMed Central En el contexto ecuatoriano, donde la concentración de médicos especialistas en Quito urbano convive con déficits en la periferia del DMQ, el CAE provee el argumento técnico para redistribución que actualmente no existe.
+
+La tercera decisión —la más invisible sin este índice— es la de monitoreo prospectivo: identificar zonas con crecimiento poblacional positivo pero accesibilidad estructuralmente baja. La planificación y construcción futura de ciudades debería enfocarse en establecer instituciones médicas en varias etapas y considerar comprehensivamente la construcción de transporte vial para lograr accesibilidad óptima a costos razonables. Nature Sin el IAE/CAE, ese monitoreo es imposible porque no hay línea de base territorial desagregada.
+
+En suma, la herramienta habilita pasar de una planificación reactiva —basada en demanda registrada o presión política— a una planificación anticipatoria basada en dónde el déficit de acceso ya existe o está emergiendo.
+
+**********
+Chen et al. / GeoHealth (2023) — toma de decisiones sobre localización de CHC
+Beks et al. (2023) — recomendaciones para práctica futura
+npj Health Systems (2025) — redistribución hospitalaria y optimización
+JMIR Formative Research (2024) — herramientas como soporte para decisores de política
+***********
 
 # 2 Revisión de literatura  
-*(esqueleto, completar con autores y citas)*  
+ 
 - Modelos de accesibilidad (gravity, dos pasos, isocronas).  
+
+En la sección anterior justiicamos la razon para elegir la zona 9 de planificación como nuestra area de estudio. Asi mismo se ha mencionado que la presencia no garantiza accesibilidad. Historicamente se han empleado distintas métricas para entender la accesibilidad, por ejemplo la razón proveedor población se ha empleado en distintos contextos, su aplicación ha derivado en una crítica constructiva que he derivado en metodos más sofisticados y acordes con la realidad territorial. Principalmente los métodos modernos subsanan dos problemas que enfrenta este indicador:   omisión de la movilidad de las personas que cruzan fronteras administrativas para buscar atención, y asumen que todos dentro de una zona tienen igual acceso. Nuevamente la elección de una zona de planificación completa nos ayuda a capturar los efectos del primer problema y asi mismo una zona de planificación es lo suficientemente grande para que se pueda capturar la heterogeneidad del acceso.  
+
+****** SUgerencias para Pablito:
+
+El indicador más usado históricamente —médicos por cada 10.000 habitantes por distrito— tiene un defecto estructural conocido: los métodos FCA no están atados a regiones administrativas sino que capturan accesibilidad basándose en áreas de captación específicamente determinadas para cada punto de población ScienceDirect, algo que la razón simple proveedor-población no puede hacer.
+Más concretamente, el 2SFCA clásico asume que los individuos dentro del área de captación tienen igual acceso a los servicios, mientras que quienes están fuera no tienen ningún acceso PubMed Central. Esto es una simplificación que el E2SFCA corrige introduciendo decaimiento por distancia, pero que la PPR ni siquiera intenta resolver.
+El segundo problema es el MAUP (Modifiable Areal Unit Problem): los resultados cambian dependiendo de cómo se tracen los límites administrativos. Las áreas con alta equidad distributiva pueden aún sufrir mala accesibilidad, mientras que facilidades accesibles pueden carecer de capacidad adecuada — patrones que solo emergen a través de análisis multidimensional integrado Springer. Dicho de otro modo, un distrito puede tener una "buena" razón proveedor-población y al mismo tiempo tener sectores periféricos completamente desconectados.
+Un tercer problema específico para contextos latinoamericanos: los sistemas de salud en América Latina son profundamente fragmentados y segmentados, lo que plantea grandes desafíos relacionados con la provisión de calidad de atención y los niveles generales de equidad BioMed Central. En ese contexto, un indicador administrativo promedia la fragmentación en lugar de revelarla.
+
+---------------------
+
+La primera mejora es la incorporación del tiempo real de viaje en lugar de distancia en línea recta. En el DMQ, donde la topografía andina hace que dos puntos equidistantes en el mapa puedan tener tiempos de viaje radicalmente distintos, esta diferencia no es menor — es la diferencia entre registrar una capacidad que no existe y medir una que sí opera. Usar isocronas generadas desde la red vial real significa que el índice captura la fricción espacial efectiva que enfrenta la población, no una aproximación geométrica de ella.
+
+La segunda mejora es la función de impedancia gaussiana, que reconoce que la disposición de la población a desplazarse no es binaria sino que decrece de forma continua con la distancia. La función gaussiana se utiliza para revelar que la disposición de las personas a viajar disminuye con la distancia creciente PubMed Central. Esto es precisamente lo que Sen llamaría capturar el funcionamiento real: no basta con que el servicio esté dentro de cierto radio, importa cuánto esfuerzo real implica alcanzarlo, y ese esfuerzo pesa más para los sectores más alejados del centro.
+
+La tercera mejora es operacional pero con consecuencias normativas directas: el CAE como medida normalizada convierte el IAE en un indicador comparable entre sectores censales. La evaluación precisa de la accesibilidad de los establecimientos médicos es un prerrequisito para la asignación razonable de recursos médicos en una ciudad PubMed Central. Un CAE menor a 1 no solo señala que ese sector tiene menos acceso que el promedio — señala que la capacidad efectiva de esa población para ejercer su derecho a la salud está por debajo de lo que el sistema ofrece en promedio, lo que constituye una desigualdad territorialmente localizable y por tanto corregible.
+
+********************
+Sen (1999) — Development as Freedom, fundamento del enfoque de capacidades
+Nussbaum (2011) — Creating Capabilities, aplicación del marco al derecho a la salud
+Luo y Qi (2009) — función gaussiana de impedancia en E2SFCA
+Delamater et al. (2012) — tiempo de viaje en red vs. distancia euclidiana
+Chen et al. / GeoHealth (2023) — precisión como prerrequisito de asignación de recursos
+Beks et al. (2023) — E2SFCA como enfoque recomendado para práctica en salud
+Buzzelli (2020) — MAUP y sus implicaciones en salud
+Apparicio et al. (2017) — tipos de distancia y errores de agregación
+Meade y Emch (2010) — PPR como línea base insuficiente
+Wood et al. (2023) — revisión sistemática sobre métodos espaciales en salud
+******************
+
 - Aplicaciones en América Latina (Brasil, México, Perú).  
 - Brecha global: escasez de trabajos que vinculen accesibilidad con registros administrativos de resultados (egresos, defunciones).
 
