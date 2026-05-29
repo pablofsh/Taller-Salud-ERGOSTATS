@@ -1,0 +1,388 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+# Cargar librerías e importar datos
+
+```{r}
+library(sf)
+library(tidyverse)
+library(leaflet)
+library(hereR)
+library(lubridate)
+
+```
+
+**Unidades de salud A, B y C**
+
+Se importan las unidades de salud en Pichincha.
+
+```{r}
+
+# Unidades de salud A, B y C
+unidad_salud <- read_csv("../data/cs_pichincha_isocronas_input.csv")
+
+# Convertirlas a objetos sf
+unidad_salud_sf <- st_as_sf(
+  unidad_salud,
+  coords = c("lon", "lat"),  # primero X (longitud), luego Y (latitud)
+  crs = 4326                 # WGS84
+)
+
+
+leaflet(unidad_salud_sf) |>
+  addTiles() |>
+  addCircleMarkers(
+    radius = 5,
+    color = "red"
+  )
+
+
+```
+
+**Zonas censales del distrito metropolitano de Quito**
+
+Se obtuvieron los centroides de los poligonos que representan las zonas censales de pichincha.
+
+```{r}
+df <- readRDS("../data/rds/poblacion_poligonos_pichincha.rds")
+
+centroides_dmq <- st_centroid(df) %>% 
+  # Transformar de UTM a Geograficas 
+  st_transform(4326) %>% 
+  select(sec, poblacion)
+
+
+```
+
+## Setear API Key
+
+Aquí se pone la llave de HERE para crear las isocronas.
+
+```{r}
+#Configurar la llave de HERE
+# here_key <-
+# set_key(here_key)
+```
+
+## Isocronas por unidad de salud
+
+Se construyen las 3 isocronas por 4 escenarios de las unidades de salud. **No hay por qué ejecutar esto.**
+
+```{r}
+# =========================================================
+# CREACIÓN DE ISOCRONAS PARA unidad_salud
+# 117 unidad_salud
+# 4 escenarios temporales
+# Isocronas de 10, 20 y 30 minutos
+# Resultado final: 1 GeoPackage con todas las isocronas
+# =========================================================
+
+# ---------------------------------------------------------
+# ESCENARIOS TEMPORALES
+# ---------------------------------------------------------
+
+escenarios <- tibble::tibble(
+  escenario = c(
+    "mie_08",
+    "mie_13",
+    "mie_18",
+    "dom_13"
+  ),
+  
+  datetime = ymd_hms(c(
+    "2026-05-13 08:00:00",
+    "2026-05-13 13:00:00",
+    "2026-05-13 18:00:00",
+    "2026-05-17 13:00:00"
+  ))
+)
+
+# ---------------------------------------------------------
+# LISTA PARA ALMACENAR RESULTADOS
+# ---------------------------------------------------------
+
+resultados <- list()
+
+contador <- 1
+
+# ---------------------------------------------------------
+# LOOP PRINCIPAL
+# ---------------------------------------------------------
+
+for(s in 1:nrow(escenarios)){
+
+  # Escenario actual
+  escenario_actual <- escenarios$escenario[s]
+  fecha_actual <- escenarios$datetime[s]
+
+  message("===================================")
+  message("Procesando escenario: ", escenario_actual)
+  message("===================================")
+
+  # Loop unidad_salud
+  for(i in 1:70){
+
+    message(
+      "Hospital ",
+      i,
+      " de ",
+      nrow(unidad_salud_sf)
+    )
+
+    # -----------------------------------------------------
+    # TRY CATCH PARA EVITAR QUE TODO COLAPSE
+    # -----------------------------------------------------
+
+    tryCatch({
+
+      # Crear isocronas
+      isocrona <- isoline(
+        poi = unidad_salud_sf[i, ],
+        
+        range = seq(10, 30, 10) * 60,
+        
+        range_type = "time",
+        
+        datetime = fecha_actual,
+        
+        traffic = TRUE
+      )
+
+      # -----------------------------------------------
+      # AGREGAR ATRIBUTOS
+      # -----------------------------------------------
+
+      isocrona <- isocrona %>%
+        mutate(
+
+          hospital_id = unidad_salud_sf$unicodigo[i],
+
+          escenario = escenario_actual,
+
+          minutos = range / 60,
+
+          banda = case_when(
+            minutos == 10 ~ "0-10",
+            minutos == 20 ~ "10-20",
+            minutos == 30 ~ "20-30"
+          )
+        )
+
+      # -----------------------------------------------
+      # GUARDAR EN LISTA
+      # -----------------------------------------------
+
+      resultados[[contador]] <- isocrona
+
+      contador <- contador + 1
+
+      # -----------------------------------------------
+      # PAUSA PARA EVITAR RATE LIMIT
+      # -----------------------------------------------
+
+      Sys.sleep(1)
+
+    }, error = function(e){
+
+      message(
+        "ERROR en hospital ",
+        i,
+        " | escenario ",
+        escenario_actual
+      )
+
+      message(e)
+
+    })
+  }
+}
+
+# ---------------------------------------------------------
+# UNIR TODOS LOS RESULTADOS
+# ---------------------------------------------------------
+
+isocronas_final <- bind_rows(resultados)
+
+# ---------------------------------------------------------
+# GUARDAR RESULTADO FINAL
+# ---------------------------------------------------------
+
+dir.create("../data/gpkg/",
+           showWarnings = FALSE)
+
+st_write(
+  isocronas_final,
+  
+  dsn = "../data/gpkg/isocronas_unidad_salud.gpkg",
+  
+  layer = "isocronas",
+  
+  delete_layer = TRUE
+)
+
+# ---------------------------------------------------------
+# MENSAJE FINAL
+# ---------------------------------------------------------
+
+message("===================================")
+message("PROCESO COMPLETADO")
+message("===================================")
+message("Total de objetos creados: ", length(resultados))
+```
+
+## Asignacion oferta - demanda
+
+**Demanada (Poblacion total atendida por zona censal)**
+
+La población ya se encuentra en los datos importados
+
+**Oferta (Health workforce supply: Suma de medicos, enfermeros y otros profesionales que consideremos)**
+
+Importamos las isocronas creadas en el paso anterior
+
+```{r}
+
+iso <- st_read("../data/gpkg/isocronas_unidad_salud.gpkg")
+```
+
+Les colocamos el número random de médicos por hospital.
+
+```{r}
+isocronas <- iso %>%
+  group_by(hospital_id) %>%
+  mutate(medicos = sample(5:20, 1)) %>%
+  ungroup() %>% 
+  select(5:last_col())
+```
+
+## Interseccion zonas censales - unidades de salud
+
+Se hace un join de los datos de las zonas censales y las isocronas de las undiades de salud.
+
+```{r}
+
+interseccion <- st_join(
+  centroides_dmq,
+  isocronas,
+  join = st_intersects
+)
+```
+
+El mismo sector puede intersectar varias isócronas de un hospital. Se conserva únicamente la observación con el menor tiempo de acceso para cada combinación de sector, hospital y escenario.
+
+```{r}
+
+interseccion <- interseccion %>% 
+  group_by(sec, hospital_id, escenario) %>% 
+  arrange(minutos, .by_group = TRUE) %>% 
+  slice(1) %>% 
+  ungroup()
+
+```
+
+Colocamos unos pesos de prueba para cada banda.
+
+```{r}
+weights <- tibble::tibble(
+  banda = c("0-10", "10-20", "20-30"),
+  w = c(1, 0.7, 0.4)
+)
+
+interseccion <- interseccion %>% 
+  left_join(weights, by = "banda") %>% 
+  select(-c(range,minutos))
+
+```
+
+Calculamos la suma de la población ponderada (primer paso) para cada hospital.
+
+$$
+R_j = \frac{S_j}{\sum_{k \in \{d_{kj} \in D_r\}} P_k W_r} \\
+= \frac{S_j}{\sum_{k \in \{d_{kj} \in D_1\}} P_k W_1 + \sum_{k \in \{d_{kj} \in D_2\}} P_k W_2 + \sum_{k \in \{d_{kj} \in D_3\}} P_k W_3}
+$$
+
+```{r}
+step1 <- interseccion %>%
+  st_drop_geometry() %>%
+  distinct(hospital_id, sec, .keep_all = TRUE) %>% 
+  group_by(hospital_id) %>% 
+  summarise(
+    poblacion_atendida = sum(poblacion*w, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+Calcular el ratio de médicos / población para cada hospital.
+
+```{r}
+
+# PASO 2: Unir los médicos variables con la población fija y calcular el ratio
+resultado_ratios <- interseccion %>%
+  st_drop_geometry() %>%
+  
+  # 1. Agrupamos por hospital y escenario para aislar los médicos de cada momento
+  group_by(hospital_id, escenario) %>%
+  summarise(
+    # Extraemos el número de médicos de ese hospital en ese escenario específico.
+    # Usamos first() si el número de médicos es un atributo único del hospital en ese momento.
+    total_medicos = first(medicos), 
+    .groups = "drop"
+  ) %>%
+  
+  # 2. Traemos la población atendida fija que calculamos en el Paso 1
+  left_join(step1, by = "hospital_id") %>%
+  
+  # 3. Tu fórmula final: médicos entre población atendida
+  mutate(
+    ratio_final = total_medicos / poblacion_atendida
+  )
+```
+
+## Calcular la accesibilidad
+
+Calculamos para cada zona censal $i$, la accesibilidad es la suma de los ratios $R_j$​ de todos los hospitales accesibles, ponderados por el peso de la banda temporal en la que cae cada hospital:
+
+$$
+\begin{aligned}
+A_i^F
+&= \sum_{j \in \{d_{ij} \in D_r\}} R_j W_r \\
+&= \sum_{j \in \{d_{ij} \in D_1\}} R_j W_1
++ \sum_{j \in \{d_{ij} \in D_2\}} R_j W_2
++ \sum_{j \in \{d_{ij} \in D_3\}} R_j W_3
+\end{aligned}
+$$
+
+```{r}
+accesibilidad <- interseccion %>%
+  st_drop_geometry() %>%
+  
+  # Traer el ratio Rj de cada hospital para cada escenario
+  left_join(
+    resultado_ratios %>%
+      select(hospital_id, escenario, ratio_final),
+    by = c("hospital_id", "escenario")
+  ) %>%
+  
+  # Traer el peso de la banda temporal
+  left_join(
+    weights,
+    by = "banda"
+  ) %>%
+  
+  # Rj * Wr
+  mutate(
+    contribucion = ratio_final * w.x
+  ) %>%
+  
+  # Σ(Rj * Wr)
+  group_by(sec, escenario) %>%
+  summarise(
+    accesibilidad = sum(contribucion, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+Ahora si quedaron pequeños. Quedó cool
