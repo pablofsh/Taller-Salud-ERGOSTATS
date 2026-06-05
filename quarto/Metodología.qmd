@@ -1,0 +1,41 @@
+\[\[Consolidación Conceptual\]\]
+
+# Área de estudio
+
+La provincia de Pichincha fue seleccionada como área de estudio por corresponder a la Zona 9 de planificación territorial (SENPLADES). Según el censo más reciente del INEC (2025), esta zona cuenta con una población de 3.089.473 habitantes distribuidos en ocho cantones que la conforman. Para atender esta demanda poblacional, la Zona 9 dispone de 280 establecimientos pertenecientes al Sistema Nacional de Salud, equivalentes al 9,71 % del total nacional de establecimientos de salud (2.887).
+
+# Datasets
+
+La investigación se llevó a cabo mediante la integración de cuatro conjuntos de datos geoespaciales complementarios. Para el primer dataset, se obtuvieron las ubicaciones de los establecimientos de salud de primer nivel de atención a partir del Geoportal GeoSalud de la Dirección Nacional de Estadística y Análisis de la Información del Sistema Nacional de Salud. Este conjunto de datos incluye los Centros de Salud tipo A, B y C, los cuales brindan atención integral al individuo, la familia y la comunidad, e incorporan entre sus prestaciones actividades de promoción de la salud, prevención de enfermedades, recuperación de la salud, rehabilitación y cuidados paliativos (Cañares, año). Asimismo, la base de datos contiene información sobre la ubicación geográfica de cada establecimiento, su Registro Único de Contribuyentes (RUC) y un código único de identificación.
+
+Para el segundo conjunto de datos, se obtuvieron los sectores censales de la Zona 9 a partir de la cartografía oficial del Instituto Nacional de Estadística y Censos (INEC). Los sectores censales corresponden a subdivisiones geográficas diseñadas para organizar, recolectar y georreferenciar la información estadística generada durante los censos de población y vivienda.
+
+El tercer conjunto de datos corresponde a la información demográfica proveniente del Censo de Población y Vivienda del INEC. Esta información fue utilizada para estimar la población residente en cada sector censal de la Zona 9.
+
+Finalmente, el cuarto conjunto de datos corresponde a la oferta de médicos utilizada en el modelo de accesibilidad. Este conjunto integra la información referente a la disponibilidad de profesionales de la salud en los establecimientos de primer nivel de atención, permitiendo representar la capacidad de prestación de servicios y evaluar su relación con la distribución espacial de la población.
+
+# Métodos
+
+Se utilizó el método Enhanced Two-Step Floating Catchment Area (E2SFCA), desarrollado por Luo y Qi, para medir la accesibilidad espacial a los servicios de atención primaria de salud. Este método es ampliamente empleado en la geografía de la salud debido a su capacidad para integrar simultáneamente la disponibilidad de servicios y la accesibilidad espacial de la población. Basado en el modelo gravitacional, el E2SFCA incorpora la capacidad de oferta de los establecimientos, la demanda potencial de servicios y los efectos de la distancia mediante una función de decaimiento espacial. De esta manera, permite representar tanto la competencia entre usuarios por los servicios disponibles como las limitaciones asociadas a la capacidad instalada de los establecimientos de salud.
+
+Previo a la aplicación del método, fue necesario definir el área de influencia y las subzonas de accesibilidad. El área de influencia corresponde al tiempo máximo de viaje que se espera que los pacientes potenciales recorran para acceder a un servicio de salud, mientras que las subzonas representan intervalos de tiempo que permiten diferenciar el nivel de accesibilidad dentro de dicha área. Estos parámetros pueden establecerse a partir de encuestas de comportamiento de viaje, criterios normativos o valores reportados en la literatura especializada.
+
+En este estudio se adoptó un área de influencia de 30 minutos, de acuerdo con los umbrales de accesibilidad comúnmente utilizados en investigaciones previas sobre acceso a servicios de salud. Dentro de esta área se definieron tres subzonas de viaje: 0–10, 10–20 y 20–30 minutos, a las cuales se asignaron ponderaciones decrecientes para reflejar la reducción de la probabilidad de utilización de los servicios a medida que aumenta el tiempo de desplazamiento.
+
+Con el fin de evaluar el efecto de la congestión vehicular sobre la accesibilidad espacial, se construyeron cuatro escenarios temporales de viaje. Tres de ellos corresponden a un día laborable (miércoles) en distintos momentos del día: 08:00, 13:00 y 18:00 horas, con el propósito de capturar las variaciones asociadas a los periodos de mayor congestión. Como escenario de referencia, se consideró adicionalmente un domingo a las 08:00 horas, representativo de condiciones de tráfico reducido.
+
+El primer paso del E2SFCA consiste en calcular los índices ponderados de médicos por habitante, $R_j$, para cada centro de atención $j$ dentro de la zona de influencia. Estos se calculan de la siguiente manera: $$
+R_j = \frac{S_j}{\sum_{k\in\{d_{kj}\in D_r\}} P_k W_r} 
+= \\ \\ \frac{S_j}{\sum_{k\in\{d_{kj}\in D_1\}} P_k W_1 + \sum_{k\in\{d_{kj}\in D_2\}} P_k W_2 + \sum_{k\in\{d_{kj}\in D_3\}} P_k W_3}$$
+
+Donde $S_j$ es el número de proveedores en la ubicación$j$, $P_k$ es la población del centroide del sector censal $k$, $d_{kj}$ es el tiempo de desplazamiento entre $k$ y $j$, y $D_r$ es la subzona ($r = 1-3$) dentro de la zona de influencia. $W_r$ es la ponderación del tiempo de viaje para la subzona $r$, que capta la disminución del tiempo de viaje para acceder a los proveedores en la subzona $r$. Las ponderaciones del tiempo de viaje se calculan típicamente con una función gaussiana.
+
+El segundo paso del E2SFCA consiste en calcular las puntuaciones de acceso para cada ubicación de población $i$, $A_i$. Las puntuaciones de acceso miden el acceso espacial a los proveedores desde la ubicación $i$. Pueden utilizarse para comparar el acceso espacial relativo a la atención dentro del área de estudio. Para calcular $A_i$, se suma todas las relaciones ponderadas entre médicos y población del paso 1 ($R_j$) con el área de influencia de cada ubicación de población.
+
+\$\$
+
+A_i\^F = \sum*{j*\in{d{ij}\in D_r}} R_j W_r \\
+
+= \sum*{j*\in{d{ij}\in D_1}} R_j W_1 + \sum*{j*\in{d{ij}\in D_2}} R_j W_2 + \sum*{j*\in{d{ij}\in D_3}} R_j W_3
+
+\$\$
