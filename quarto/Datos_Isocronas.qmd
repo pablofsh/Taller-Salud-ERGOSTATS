@@ -71,7 +71,7 @@ Aquí se pone la llave de HERE para crear las isocronas.
 
 Se construyen las 3 isocronas por 4 escenarios de las unidades de salud. **No hay por qué ejecutar esto.**
 
-```{r}
+```{r,eval=FALSE}
 # =========================================================
 # CREACIÓN DE ISOCRONAS PARA unidad_salud
 # 117 unidad_salud
@@ -251,11 +251,27 @@ iso <- st_read("../data/gpkg/isocronas_unidad_salud.gpkg")
 Les colocamos el número random de médicos por hospital.
 
 ```{r}
+parroquias <- read_csv("../data/capacidad_pichincha_parroquias.csv")
+
+parroquias <- parroquias %>% mutate(medicos = medicina_general+medicina_familiar+pediatria+ginecologia_obstetricia+odontologia+medicina_interna,parr_ubi=as.character(parr_ubi))
+
+df <- st_transform(df,crs = 4326)
+
+df <- st_make_valid(df)
+
+unidad_interseccion <- st_join(
+  unidad_salud_sf,
+  df,
+  join = st_intersects
+)
+
+parroquias <- unidad_interseccion %>% 
+  select(hospital_id = unicodigo,parroqu) %>% 
+  left_join(parroquias,by = c("parroqu"="parr_ubi")) %>% 
+  select(hospital_id,parroqu,medicos)
+
 isocronas <- iso %>%
-  group_by(hospital_id) %>%
-  mutate(medicos = sample(5:20, 1)) %>%
-  ungroup() %>% 
-  select(5:last_col())
+  left_join(as_tibble(parroquias))
 ```
 
 ## Interseccion zonas censales - unidades de salud
