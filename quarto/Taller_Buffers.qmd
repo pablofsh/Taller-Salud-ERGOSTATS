@@ -4,63 +4,98 @@ format: html
 editor: visual
 ---
 
-```{r}
+# Sección 1: Preparación de los datos espaciales
 
+::: callout-note
+## Objetivos de esta sección
+
+1.  Importar las unidades de salud utilizadas como puntos de oferta.
+2.  Importar las zonas censales que representan la población potencialmente demandante.
+3.  Transformar todos los datos a un sistema de referencia espacial adecuado para análisis de distancias.
+:::
+
+Antes de construir las áreas de influencia es necesario preparar la información espacial. En esta etapa se cargan las unidades de salud y los centroides de las zonas censales que serán utilizados posteriormente para representar la oferta y la demanda de servicios de salud.
+
+## Cargar librerías
+
+```{r}
 library(sf)
 library(tidyverse)
 library(leaflet)
 library(hereR)
 library(lubridate)
-library()
-
 ```
 
-**Unidades de salud A, B y C**
+## Importar las unidades de salud
 
-Se importan las unidades de salud en Pichincha.
+Las unidades de salud representan los puntos de oferta del sistema. Cada establecimiento corresponde a un posible proveedor de servicios de atención primaria.
 
 ```{r}
 # Unidades de salud A, B y C
-unidad_salud <- read_csv("../data/cs_pichincha_isocronas_input.csv")
-
-# Convertirlas a objetos sf
-unidad_salud_sf <- st_as_sf(
-  unidad_salud,
-  coords = c("lon", "lat"),  # primero X (longitud), luego Y (latitud)
-  crs = 4326                 # WGS84
+unidad_salud <- read_csv(
+  "../data/cs_pichincha_isocronas_input.csv"
 )
 
-unidad_salud_sf <- st_transform(
+unidad_salud_sf <- st_as_sf(
+  unidad_salud,
+  coords = c("lon", "lat"),
+  crs = 4326
+)
+
+unidad_salud_sf_metros <- st_transform(
   unidad_salud_sf,
   32717
 )
 
 rm("unidad_salud")
-
 ```
 
-**Zonas censales de pichincha**
+## Importar las zonas censales
 
-Se obtuvieron los centroides de los poligonos que representan las zonas censales de pichincha.
+Los centroides de las zonas censales se utilizan para representar espacialmente la localización de la población.
 
 ```{r}
-df <- readRDS("../data/rds/poblacion_poligonos_pichincha.rds")
+df <- readRDS(
+  "../data/rds/poblacion_poligonos_pichincha.rds"
+)
 
-centroides_dmq <- st_centroid(df)  %>% 
+centroides_dmq_metros <- st_centroid(df) %>% 
   select(sec, poblacion)
 
-st_crs(centroides_dmq)
+st_crs(centroides_dmq_metros)
 
 rm("df")
-
 ```
 
+# Sección 2: Construcción de áreas de cobertura mediante buffers
+
+::: callout-note
+## Objetivos de esta sección
+
+1.  Generar áreas de influencia alrededor de cada unidad de salud.
+2.  Definir bandas de distancia para representar distintos niveles de accesibilidad potencial.
+3.  Construir una aproximación simplificada a las áreas de cobertura utilizadas en el análisis.
+:::
+
+En ausencia de información de red vial o tiempos de viaje, una alternativa común consiste en utilizar buffers de distancia euclidiana. Estos buffers representan áreas circulares alrededor de cada establecimiento y permiten aproximar distintos niveles de accesibilidad espacial.
+
+## Generar buffers de distancia
+
+Se construyen buffers de 5, 10 y 15 kilómetros alrededor de cada unidad de salud.
+
 ```{r}
-distancias <- c(5000, 10000, 15000)
+distancias <- c(
+  5000,
+  10000,
+  15000
+)
 
 buffers_final <- purrr::map_dfr(
   distancias,
-  ~ st_buffer(unidad_salud_sf, dist = .x) %>%
+  ~ st_buffer(
+      unidad_salud_sf_metros,
+      dist = .x
+    ) %>%
     mutate(
       distancia_m = .x,
       distancia_km = .x / 1000,
@@ -73,96 +108,239 @@ buffers_final <- purrr::map_dfr(
 )
 ```
 
+# Sección 3: Asignación de la capacidad de oferta
+
+::: callout-note
+## Objetivos de esta sección
+
+1.  Asociar una capacidad de oferta a cada establecimiento.
+2.  Incorporar la variable de oferta necesaria para el cálculo del índice E2SFCA.
+:::
+
+Cada establecimiento debe contar con una medida de oferta que represente su capacidad de atención. En este ejemplo se asigna un número de médicos a cada unidad de salud con fines demostrativos.
+
+## Incorporar la oferta de servicios
+
 ```{r}
 buffers <- buffers_final %>%
   group_by(unicodigo) %>%
-  mutate(medicos = sample(5:20, 1)) %>%
-  ungroup() 
+  mutate(
+    medicos = sample(5:20, 1)
+  ) %>%
+  ungroup()
 ```
+
+# Sección 4: Construcción de la matriz origen-destino
+
+:::callout-note
+
+## Objetivos de esta sección
+1. Identificar qué zonas censales se encuentran dentro del área de influencia de cada establecimiento.
+1. Construir la matriz espacial que relaciona oferta y demanda.
+
+:::
+
+Para determinar qué población puede acceder potencialmente a cada establecimiento se realiza una intersección espacial entre los centroides censales y los buffers construidos previamente.
+
+## Intersectar centroides y áreas de cobertura
 
 ```{r}
 interseccion_buffers <- st_join(
-  centroides_dmq,
+  centroides_dmq_metros,
   buffers,
   join = st_intersects
 )
 ```
 
+## Conservar la banda más cercana
+
+Una misma zona censal puede encontrarse dentro de varios buffers de un mismo establecimiento. En estos casos se conserva únicamente la distancia más cercana.
+
 ```{r}
 interseccion_buffers <- interseccion_buffers %>% 
-  group_by(sec, unicodigo) %>% 
-  arrange(banda, .by_group = TRUE) %>% 
+  group_by(
+    sec,
+    unicodigo
+  ) %>% 
+  arrange(
+    banda,
+    .by_group = TRUE
+  ) %>% 
   slice(1) %>% 
   ungroup()
-
 ```
 
+# Sección 5: Asignación de pesos de impedancia espacial
+
+:::callout-note
+
+## Objetivos de esta sección
+1. Representar el efecto de la distancia sobre la accesibilidad.
+1. Asignar una ponderación distinta a cada banda de distancia.
+:::
+
+La accesibilidad disminuye a medida que aumenta la distancia entre la población y los establecimientos de salud. Para representar este fenómeno se asignan pesos de impedancia a cada banda de distancia.
+
+## Definir la función de impedancia gaussiana
+
+La función de impedancia transforma los tiempos de viaje en factores de ponderación que posteriormente serán utilizados en el cálculo del índice de accesibilidad.
+
 ```{r}
-weights <- tibble::tibble(
-  banda = c("0-5", "5-10", "10-15"),
-  w = c(1, 0.7, 0.4)
+impedancia <- function(mintiempo, subzonatiempo, maxtiempo){
+  beta <- -((maxtiempo - mintiempo)^2) / log(0.01)
+  
+  peso <- exp(
+    -(subzonatiempo - mintiempo)^2 / beta
+  )
+  
+  peso <- round(peso, 2)
+  
+  return(peso)
+}
+```
+
+### Establecer los parámetros de la función de decaimiento
+
+La función gaussiana utilizada requiere definir un tiempo mínimo de referencia ($d_min$) y un tiempo máximo ($d_max$). El valor de 5 minutos se estableció como una aproximación al tiempo de desplazamiento más favorable que puede experimentar una persona dentro del área de estudio. En lugar de utilizar un valor de cero minutos, que implicaría ausencia total de desplazamiento y una accesibilidad teóricamente perfecta, se consideró que incluso los usuarios ubicados en las inmediaciones de un establecimiento deben invertir cierto tiempo en movilizarse hasta el servicio.
+
+Además, utilizar un tiempo mínimo distinto de cero evita que la función de impedancia concentre toda la ponderación en observaciones extremadamente cercanas al establecimiento. De esta manera, los pesos máximos se asignan a desplazamientos muy cortos pero realistas, permitiendo una transición más gradual en el decaimiento de la accesibilidad a medida que aumenta el tiempo de viaje.
+
+## Calcular los pesos para cada banda temporal
+
+Los pesos fueron calculados para cada banda temporal considerando un tiempo mínimo de referencia de 5 minutos y un tiempo máximo de 30 minutos.
+
+```{r}
+peso_NA <- NA
+
+peso_10 <- impedancia(
+  mintiempo = 5,
+  subzonatiempo = 2.5,
+  maxtiempo = 15
 )
 
-interseccion_buffers <- interseccion_buffers %>% 
-  left_join(weights, by = "banda")
+peso_20 <- impedancia(
+  mintiempo = 5,
+  subzonatiempo = 7.5,
+  maxtiempo = 15
+)
 
+peso_30 <- impedancia(
+  mintiempo = 5,
+  subzonatiempo = 12.5,
+  maxtiempo = 15
+)
+
+sub1 <- "0-5"
+sub2 <- "5-10"
+sub3 <- "10-15"
 ```
 
+## Asignar los pesos a la matriz origen-destino
+
+Una vez calculados los factores de ponderación, estos se asignan a cada relación entre zona censal y establecimiento de salud de acuerdo con la banda temporal en la que se encuentra.
+
 ```{r}
-step1 <- interseccion_buffers %>%
+interseccion_buffers <- interseccion_buffers %>%  
+  mutate(
+    w = case_when(
+      banda == sub1 ~ peso_10,
+      banda == sub2 ~ peso_20,
+      banda == sub3 ~ peso_30,
+      TRUE ~ peso_NA
+    )
+  )
+```
+
+# Sección 6: Cálculo del índice de accesibilidad E2SFCA usando buffers
+
+:::callout-note
+
+## Objetivos de esta sección
+1. Calcular la población ponderada atendida por cada establecimiento.
+1. Estimar la razón oferta-demanda de cada unidad de salud.
+1. Calcular la accesibilidad potencial para cada zona censal.
+:::
+
+El método E2SFCA se desarrolla en dos pasos. Primero se calcula la razón oferta-demanda para cada establecimiento y posteriormente se estima la accesibilidad potencial de cada zona censal.
+
+## Paso 1: Calcular la población ponderada atendida
+
+```{r}
+step1_buffers <- interseccion_buffers %>%
   st_drop_geometry() %>%
-  distinct(unicodigo, sec, .keep_all = TRUE) %>% 
+  distinct(
+    unicodigo,
+    sec,
+    .keep_all = TRUE
+  ) %>% 
   group_by(unicodigo) %>% 
   summarise(
-    poblacion_atendida = sum(poblacion*w, na.rm = TRUE),
+    poblacion_atendida =
+      sum(
+        poblacion * w,
+        na.rm = TRUE
+      ),
     .groups = "drop"
   )
 ```
 
-```{r}
+## Paso 2: Calcular la razón oferta-demanda
 
-# PASO 2: Unir los médicos variables con la población fija y calcular el ratio
-resultado_ratios <- interseccion_buffers %>%
+```{r}
+resultado_ratios_buffers <- interseccion_buffers %>%
   st_drop_geometry() %>%
-  
-  # 1. Agrupamos por hospital y escenario para aislar los médicos de cada momento
   group_by(unicodigo) %>%
   summarise(
-    # Extraemos el número de médicos de ese hospital en ese escenario específico.
-    # Usamos first() si el número de médicos es un atributo único del hospital en ese momento.
-    total_medicos = first(medicos), 
+    total_medicos = first(medicos),
     .groups = "drop"
   ) %>%
-  
-  # 2. Traemos la población atendida fija que calculamos en el Paso 1
-  left_join(step1, by = "unicodigo") %>%
-  
-  # 3. Tu fórmula final: médicos entre población atendida
+  left_join(
+    step1_buffers,
+    by = "unicodigo"
+  ) %>%
   mutate(
-    ratio_final = total_medicos / poblacion_atendida
+    ratio_final =
+      total_medicos /
+      poblacion_atendida
   )
 ```
+
+## Paso 3: Calcular la accesibilidad potencial
 
 ```{r}
-accesibilidad <- interseccion_buffers %>%
+accesibilidad_buffers <- interseccion_buffers %>%
   st_drop_geometry() %>%
   
-  # Traer el ratio Rj de cada hospital para cada escenario
   left_join(
-    resultado_ratios %>%
-      select(unicodigo, ratio_final),
-    by = c("unicodigo")
-  ) %>%
-
-  # Rj * Wr
-  mutate(
-    contribucion = ratio_final * w
+    resultado_ratios_buffers %>%
+      select(
+        unicodigo,
+        ratio_final
+      ),
+    by = "unicodigo"
   ) %>%
   
-  # Σ(Rj * Wr)
+  mutate(
+    contribucion =
+      ratio_final * w
+  ) %>%
+  
   group_by(sec) %>%
   summarise(
-    accesibilidad = sum(contribucion, na.rm = TRUE),
+    accesibilidad =
+      sum(
+        contribucion,
+        na.rm = TRUE
+      ),
     .groups = "drop"
+  ) %>%  mutate(
+    indice =
+      accesibilidad /
+      mean(
+        accesibilidad,
+        na.rm = TRUE
+      )
   )
 ```
+
+El resultado final corresponde al nivel de accesibilidad potencial de cada zona censal considerando simultáneamente la capacidad de oferta de los establecimientos, la distribución espacial de la población y el efecto de la distancia sobre la utilización potencial de los servicios de salud.
