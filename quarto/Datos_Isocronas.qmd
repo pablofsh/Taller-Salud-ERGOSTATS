@@ -71,7 +71,7 @@ Aquí se pone la llave de HERE para crear las isocronas.
 
 Se construyen las 3 isocronas por 4 escenarios de las unidades de salud. **No hay por qué ejecutar esto.**
 
-```{r}
+```{r,eval=FALSE}
 # =========================================================
 # CREACIÓN DE ISOCRONAS PARA unidad_salud
 # 117 unidad_salud
@@ -251,11 +251,27 @@ iso <- st_read("../data/gpkg/isocronas_unidad_salud.gpkg")
 Les colocamos el número random de médicos por hospital.
 
 ```{r}
+parroquias <- read_csv("../data/capacidad_pichincha_parroquias.csv")
+
+parroquias <- parroquias %>% mutate(medicos = medicina_general+medicina_familiar+pediatria+ginecologia_obstetricia+odontologia+medicina_interna,parr_ubi=as.character(parr_ubi))
+
+df <- st_transform(df,crs = 4326)
+
+df <- st_make_valid(df)
+
+unidad_interseccion <- st_join(
+  unidad_salud_sf,
+  df,
+  join = st_intersects
+)
+
+parroquias <- unidad_interseccion %>% 
+  select(hospital_id = unicodigo,parroqu) %>% 
+  left_join(parroquias,by = c("parroqu"="parr_ubi")) %>% 
+  select(hospital_id,parroqu,medicos)
+
 isocronas <- iso %>%
-  group_by(hospital_id) %>%
-  mutate(medicos = sample(5:20, 1)) %>%
-  ungroup() %>% 
-  select(5:last_col())
+  left_join(as_tibble(parroquias))
 ```
 
 ## Interseccion zonas censales - unidades de salud
@@ -299,10 +315,8 @@ interseccion <- interseccion %>%
 
 Calculamos la suma de la población ponderada (primer paso) para cada hospital.
 
-$$
-R_j = \frac{S_j}{\sum_{k \in \{d_{kj} \in D_r\}} P_k W_r} \\
-= \frac{S_j}{\sum_{k \in \{d_{kj} \in D_1\}} P_k W_1 + \sum_{k \in \{d_{kj} \in D_2\}} P_k W_2 + \sum_{k \in \{d_{kj} \in D_3\}} P_k W_3}
-$$
+$$R_j = \frac{S_j}{\sum_{k \in \{d_{kj} \in D_r\}} P_k W_r} \\
+= \frac{S_j}{\sum_{k \in \{d_{kj} \in D_1\}} P_k W_1 + \sum_{k \in \{d_{kj} \in D_2\}} P_k W_2 + \sum_{k \in \{d_{kj} \in D_3\}} P_k W_3}$$
 
 ```{r}
 step1 <- interseccion %>%
@@ -345,15 +359,13 @@ resultado_ratios <- interseccion %>%
 
 Calculamos para cada zona censal $i$, la accesibilidad es la suma de los ratios $R_j$​ de todos los hospitales accesibles, ponderados por el peso de la banda temporal en la que cae cada hospital:
 
-$$
-\begin{aligned}
+$$\begin{aligned}
 A_i^F
 &= \sum_{j \in \{d_{ij} \in D_r\}} R_j W_r \\
 &= \sum_{j \in \{d_{ij} \in D_1\}} R_j W_1
 + \sum_{j \in \{d_{ij} \in D_2\}} R_j W_2
 + \sum_{j \in \{d_{ij} \in D_3\}} R_j W_3
-\end{aligned}
-$$
+\end{aligned}$$
 
 ```{r}
 accesibilidad <- interseccion %>%
@@ -382,7 +394,36 @@ accesibilidad <- interseccion %>%
   summarise(
     accesibilidad = sum(contribucion, na.rm = TRUE),
     .groups = "drop"
-  )
+  ) %>% 
+  mutate(indice = accesibilidad/mean(accesibilidad, na.rm = T))
 ```
 
 Ahora si quedaron pequeños. Quedó cool
+
+```{r}
+no_accesibles <- accesibilidad %>%
+  mutate(dummy_menor = indice < 1,
+         dummy_igual = indice == 1,
+         dummy_mayor = indice > 1)  %>%
+  filter(dummy_menor,
+         indice > 0 ,
+         indice < 0.25) %>% 
+  arrange(indice)
+
+
+no_accesibles_puntos <- centroides_dmq %>% 
+  right_join(no_accesibles %>% distinct(sec))
+
+leaflet() |>
+  addTiles() |>
+  addCircleMarkers(
+    data = unidad_salud_sf,
+    radius = 5,
+    color = "blue"
+  ) |>
+  addCircleMarkers(
+    data = no_accesibles_puntos,
+    radius = 5,
+    color = "red"
+  )
+```
