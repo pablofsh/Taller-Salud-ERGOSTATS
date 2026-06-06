@@ -1,0 +1,97 @@
+parr_ubi,nombre_parroquia,cant_ubi,nombre_canton,n_establecimientos,medicina_general,medicina_familiar,pediatria,ginecologia_obstetricia,odontologia,medicina_interna
+170101,Belisario Quevedo,1701,Distrito Metropolitano De Quito,17,22,13,74,42,22,29
+170102,Carcelén,1701,Distrito Metropolitano De Quito,6,128,9,26,20,6,9
+170103,Centro Histórico,1701,Distrito Metropolitano De Quito,13,57,11,7,22,25,9
+170104,Cochapamba,1701,Distrito Metropolitano De Quito,5,6,5,0,3,4,0
+170105,Comité Del Pueblo,1701,Distrito Metropolitano De Quito,7,27,17,11,16,10,6
+170106,Cotocollao,1701,Distrito Metropolitano De Quito,9,162,1,16,20,12,22
+170107,Chilibulo,1701,Distrito Metropolitano De Quito,4,108,4,24,23,7,18
+170108,Chillogallo,1701,Distrito Metropolitano De Quito,6,6,7,0,5,5,0
+170109,Chimbacalle,1701,Distrito Metropolitano De Quito,11,153,12,18,28,26,3
+170110,El Condado,1701,Distrito Metropolitano De Quito,7,6,10,0,3,9,0
+170111,Guamaní,1701,Distrito Metropolitano De Quito,8,67,8,58,61,6,3
+170112,Iñaquito,1701,Distrito Metropolitano De Quito,30,15,3,64,60,10,5
+170113,Itchimbia,1701,Distrito Metropolitano De Quito,9,318,3,42,74,8,25
+170114,Jipijapa,1701,Distrito Metropolitano De Quito,7,49,5,9,23,30,3
+170115,Kennedy,1701,Distrito Metropolitano De Quito,8,12,6,1,2,4,0
+170116,La Argelia,1701,Distrito Metropolitano De Quito,9,17,5,0,8,9,0
+170117,La Concepción,1701,Distrito Metropolitano De Quito,7,34,3,10,12,7,6
+170118,La Ecuatoriana,1701,Distrito Metropolitano De Quito,6,7,15,1,4,7,0
+170119,La Ferroviaria,1701,Distrito Metropolitano De Quito,7,6,4,0,6,7,0
+170120,La Libertad,1701,Distrito Metropolitano De Quito,3,3,2,0,3,5,0
+170121,La Magdalena,1701,Distrito Metropolitano De Quito,9,28,7,1,9,5,4
+170122,La Mena,1701,Distrito Metropolitano De Quito,3,4,3,0,3,3,0
+170123,Mariscal Sucre,1701,Distrito Metropolitano De Quito,18,148,17,75,16,16,7
+170124,Ponceano,1701,Distrito Metropolitano De Quito,8,14,5,2,1,7,4
+170125,Puengasí,1701,Distrito Metropolitano De Quito,5,6,3,0,5,6,0
+170126,Quitumbe,1701,Distrito Metropolitano De Quito,14,13,6,4,9,9,1
+170127,Rumipamba,1701,Distrito Metropolitano De Quito,12,14,7,9,26,6,7
+170128,San Bartolo,1701,Distrito Metropolitano De Quito,9,263,8,38,24,12,17
+170129,San Isidro Del Inca,1701,Distrito Metropolitano De Quito,5,2,2,7,5,3,5
+170130,San Juan,1701,Distrito Metropolitano De Quito,10,239,6,58,43,11,24
+170131,Solanda,1701,Distrito Metropolitano De Quito,13,19,8,3,8,10,1
+170132,Turubamba,1701,Distrito Metropolitano De Quito,6,8,11,2,7,9,0
+170150,"Quito, Cabecera Cantonal",1701,Distrito Metropolitano De Quito,1,8,0,1,2,5,0
+170151,Alangasí,1701,Distrito Metropolitano De Quito,4,11,3,0,5,2,1
+170152,Amaguaña,1701,Distrito Metropolitano De Quito,6,6,7,0,5,4,0
+170153,Atahualpa,1701,Distrito Metropolitano De Quito,1,1,0,0,0,0,0
+170154,Calacalí,1701,Distrito Metropolitano De Quito,1,0,1,0,0,0,0
+170155,Calderón,1701,Distrito Metropolitano De Quito,15,112,13,32,38,13,12
+170156,Conocoto,1701,Distrito Metropolitano De Quito,6,35,47,3,13,5,2
+170157,Cumbayá,1701,Distrito Metropolitano De Quito,3,29,6,9,5,3,6
+170158,Chavezpamba,1701,Distrito Metropolitano De Quito,2,1,0,0,0,1,0
+170159,Checa,1701,Distrito Metropolitano De Quito,1,0,2,0,1,1,0
+170160,El Quinche,1701,Distrito Metropolitano De Quito,3,1,3,0,1,2,0
+170161,Gualea,1701,Distrito Metropolitano De Quito,4,0,1,0,0,0,0
+170162,Guangopolo,1701,Distrito Metropolitano De Quito,1,1,1,0,1,1,0
+170163,Guayllabamba,1701,Distrito Metropolitano De Quito,1,0,2,0,1,1,0
+170164,La Merced,1701,Distrito Metropolitano De Quito,1,1,1,0,6,2,0
+170165,Llano Chico,1701,Distrito Metropolitano De Quito,1,2,1,0,1,1,0
+170166,Lloa,1701,Distrito Metropolitano De Quito,1,5,1,0,1,2,0
+170168,Nanegal,1701,Distrito Metropolitano De Quito,2,0,1,0,0,1,0
+170169,Nanegalito,1701,Distrito Metropolitano De Quito,3,7,1,1,3,2,0
+170170,Nayón,1701,Distrito Metropolitano De Quito,3,5,1,0,3,2,0
+170171,Nono,1701,Distrito Metropolitano De Quito,1,0,0,0,0,0,0
+170172,Pacto,1701,Distrito Metropolitano De Quito,4,2,1,0,1,4,0
+170174,Perucho,1701,Distrito Metropolitano De Quito,1,0,1,0,0,1,0
+170175,Pifo,1701,Distrito Metropolitano De Quito,4,5,2,0,1,2,0
+170176,Píntag,1701,Distrito Metropolitano De Quito,2,2,2,0,3,1,0
+170177,Pomasqui,1701,Distrito Metropolitano De Quito,3,4,1,0,1,4,0
+170178,Puéllaro,1701,Distrito Metropolitano De Quito,2,1,0,0,1,1,0
+170179,Puembo,1701,Distrito Metropolitano De Quito,5,0,3,0,1,1,0
+170180,San Antonio,1701,Distrito Metropolitano De Quito,4,6,6,2,6,5,0
+170181,San José De Minas,1701,Distrito Metropolitano De Quito,1,0,1,0,0,0,0
+170183,Tababela,1701,Distrito Metropolitano De Quito,1,0,1,0,1,1,0
+170184,Tumbaco,1701,Distrito Metropolitano De Quito,4,10,5,3,6,4,1
+170185,Yaruquí,1701,Distrito Metropolitano De Quito,2,1,4,5,16,4,4
+170186,Zámbiza,1701,Distrito Metropolitano De Quito,2,2,2,0,1,2,0
+170202,Cayambe,1702,Cayambe,4,13,8,10,13,10,1
+170250,"Cayambe, Cabecera Cantonal",1702,Cayambe,5,4,4,1,7,5,0
+170251,Ascázubi,1702,Cayambe,1,2,1,0,1,0,0
+170252,Cangahua,1702,Cayambe,6,3,2,0,2,4,0
+170253,Olmedo,1702,Cayambe,4,1,1,0,0,1,0
+170254,Otón,1702,Cayambe,1,0,1,0,0,0,0
+170255,Santa Rosa De Cuzubamba,1702,Cayambe,1,0,1,0,1,0,0
+170256,San José De Ayora,1702,Cayambe,1,0,1,0,0,1,0
+170350,"Machachi, Cabecera Cantonal",1703,Mejía,7,28,4,4,12,8,3
+170351,Aloag,1703,Mejía,2,2,0,0,1,0,0
+170352,Aloasí,1703,Mejía,2,2,2,0,1,3,0
+170353,Cutuglahua,1703,Mejía,1,0,1,0,2,0,0
+170354,El Chaupi,1703,Mejía,1,0,0,0,0,1,0
+170355,Manuel Cornejo Astorga,1703,Mejía,2,1,0,0,0,1,0
+170356,Tambillo,1703,Mejía,3,3,2,0,1,1,0
+170357,Uyumbicho,1703,Mejía,1,0,0,0,1,0,0
+170450,"Tabacundo, Cabecera Cantonal",1704,Pedro Moncayo,4,4,2,2,4,5,0
+170451,La Esperanza,1704,Pedro Moncayo,1,0,1,0,0,1,0
+170452,Malchinguí,1704,Pedro Moncayo,1,0,1,0,1,0,0
+170453,Tocachi,1704,Pedro Moncayo,1,0,1,0,0,0,0
+170454,Tupigachi,1704,Pedro Moncayo,1,0,1,0,1,0,0
+170501,Sangolquí,1705,Rumiñahui,5,59,5,10,17,8,8
+170503,San Rafael,1705,Rumiñahui,1,2,0,0,0,0,0
+170550,"Sangolquí, Cabecera Cantonal",1705,Rumiñahui,17,15,6,2,9,7,3
+170551,Cotogchoa,1705,Rumiñahui,1,0,2,0,1,3,0
+170552,Rumipamba,1705,Rumiñahui,1,0,1,0,0,0,0
+170750,"San Miguel De Los Bancos, Cabecera Cantonal",1707,San Miguel De Los Bancos,3,7,2,0,6,2,0
+170751,Mindo,1707,San Miguel De Los Bancos,1,0,1,0,1,0,0
+170850,"Pedro Vicente Maldonado, Cabecera Cantonal",1708,Pedro Vicente Maldonado,5,8,7,0,4,6,1
+170950,"Puerto Quito, Cabecera Cantonal",1709,Puerto Quito,7,12,5,0,8,7,0
