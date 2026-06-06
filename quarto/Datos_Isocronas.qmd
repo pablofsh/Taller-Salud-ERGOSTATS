@@ -4,7 +4,19 @@ format: html
 editor: visual
 ---
 
-# Cargar librerías e importar datos
+# Sección 1: Preparación de los datos espaciales
+
+::: callout-note
+## Objetivos de esta sección
+
+1.  Importar las unidades de salud y las zonas censales de la provincia de Pichincha.
+2.  Convertir las unidades de salud en objetos espaciales compatibles con análisis geográficos.
+3.  Preparar los centroides de las zonas censales que serán utilizados en etapas posteriores del análisis de accesibilidad.
+:::
+
+## Cargar librerías
+
+En esta sección se cargan las librerías necesarias para el procesamiento de datos espaciales, la manipulación de tablas, la visualización cartográfica y el acceso a la API de HERE.
 
 ```{r}
 library(sf)
@@ -12,64 +24,137 @@ library(tidyverse)
 library(leaflet)
 library(hereR)
 library(lubridate)
-
 ```
 
-**Unidades de salud A, B y C**
+## Importar las unidades de salud
 
-Se importan las unidades de salud en Pichincha.
+Las unidades de salud corresponden a los establecimientos de atención primaria y hospitales considerados en el análisis. Inicialmente se encuentran almacenadas como una tabla con coordenadas geográficas.
+
+Para poder realizar operaciones espaciales, estas coordenadas se transforman a un objeto de tipo 'sf', utilizando el sistema de referencia WGS84 (EPSG:4326).
 
 ```{r}
-
-# Unidades de salud A, B y C
-unidad_salud <- read_csv("../data/cs_pichincha_isocronas_input.csv")
-
-# Convertirlas a objetos sf
-unidad_salud_sf <- st_as_sf(
-  unidad_salud,
-  coords = c("lon", "lat"),  # primero X (longitud), luego Y (latitud)
-  crs = 4326                 # WGS84
+# Importar unidades de salud
+unidad_salud <- read_csv(
+  "../data/cs_pichincha_isocronas_input.csv"
 )
 
+# Convertir tabla a objeto espacial
+unidad_salud_sf <- st_as_sf(
+  unidad_salud,
+  coords = c("lon", "lat"),
+  crs = 4326
+)
+```
 
+## Visualizar las unidades de salud
+
+Antes de iniciar el análisis es recomendable verificar visualmente que las coordenadas hayan sido importadas correctamente.
+
+```{r}
 leaflet(unidad_salud_sf) |>
   addTiles() |>
   addCircleMarkers(
     radius = 5,
     color = "red"
   )
-
-
 ```
 
-**Zonas censales del distrito metropolitano de Quito**
+## Importar las zonas censales
 
-Se obtuvieron los centroides de los poligonos que representan las zonas censales de pichincha.
+Las zonas censales representan las unidades geográficas de análisis utilizadas para estimar la demanda potencial de servicios de salud.
 
 ```{r}
-df <- readRDS("../data/rds/poblacion_poligonos_pichincha.rds")
+df <- readRDS(
+  "../data/rds/poblacion_poligonos_pichincha.rds"
+)
+```
 
-centroides_dmq <- st_centroid(df) %>% 
-  # Transformar de UTM a Geograficas 
-  st_transform(4326) %>% 
+## Calcular centroides de las zonas censales
+
+Los centroides permiten representar cada zona censal mediante un único punto. Estos puntos serán utilizados posteriormente para evaluar la accesibilidad de la población a las unidades de salud.
+
+```{r}
+centroides_dmq <- st_centroid(df) %>%
+  st_transform(4326) %>%
   select(sec, poblacion)
-
-
 ```
 
-## Setear API Key
+# Sección 2: Configuración de la API de HERE
 
-Aquí se pone la llave de HERE para crear las isocronas.
+::: callout-note
+## Objetivos de esta sección
+
+1.  Configurar la conexión con la API de HERE.
+2.  Habilitar el cálculo de isócronas basadas en la red vial y condiciones de tráfico.
+:::
+
+## Configurar la llave de acceso
+
+La API de HERE requiere una llave de autenticación para realizar solicitudes de rutas e isócronas.
 
 ```{r}
-#Configurar la llave de HERE
-# here_key <-
-# set_key(here_key)
+#here_key <- 
+#set_key(here_key)
 ```
 
-## Isocronas por unidad de salud
+# Sección 3: Generación de isócronas de acceso a servicios de salud
 
-Se construyen las 3 isocronas por 4 escenarios de las unidades de salud. **No hay por qué ejecutar esto.**
+::: callout-note
+## Objetivos de esta sección
+
+1.  Generar áreas de accesibilidad para cada unidad de salud.
+2.  Incorporar condiciones de tráfico para simular tiempos reales de desplazamiento.
+3.  Almacenar todas las isócronas en un único archivo geoespacial.
+:::
+
+## Definir escenarios temporales
+
+La accesibilidad puede variar según la hora del día y las condiciones de circulación. Por esta razón se construyen cuatro escenarios temporales representativos.
+
+```{r}
+escenarios <- tibble(
+  escenario = c(
+    "mie_08",
+    "mie_13",
+    "mie_18",
+    "dom_13"
+  ),
+
+  datetime = ymd_hms(c(
+    "2026-05-13 08:00:00",
+    "2026-05-13 13:00:00",
+    "2026-05-13 18:00:00",
+    "2026-05-17 13:00:00"
+  ))
+)
+```
+
+### Descripción de los escenarios
+
+Los escenarios seleccionados representan distintos momentos de la semana en los que los patrones de movilidad pueden diferir significativamente:
+
+| Escenario | Descripción                                    |
+|-----------|------------------------------------------------|
+| mie_08    | Hora pico matutina                             |
+| mie_13    | Periodo de mediodía                            |
+| mie_18    | Hora pico vespertina                           |
+| dom_13    | Condiciones de movilidad durante fin de semana |
+
+## Construir las isócronas para cada unidad de salud
+
+Para cada establecimiento de salud y para cada escenario temporal se generan tres zonas de accesibilidad:
+
+-   0–10 minutos
+-   10–20 minutos
+-   20–30 minutos
+
+Los tiempos de viaje se calculan utilizando la red vial y las condiciones de tráfico estimadas por HERE.
+
+### Manejo de errores
+
+Durante la generación de isócronas pueden ocurrir errores asociados a límites de la API, problemas temporales de conexión o inconsistencias en la red vial.
+
+Por esta razón se utiliza la función `tryCatch()`, que permite continuar el procesamiento incluso cuando una solicitud individual falla.
 
 ```{r,eval=FALSE}
 # =========================================================
@@ -80,25 +165,6 @@ Se construyen las 3 isocronas por 4 escenarios de las unidades de salud. **No ha
 # Resultado final: 1 GeoPackage con todas las isocronas
 # =========================================================
 
-# ---------------------------------------------------------
-# ESCENARIOS TEMPORALES
-# ---------------------------------------------------------
-
-escenarios <- tibble::tibble(
-  escenario = c(
-    "mie_08",
-    "mie_13",
-    "mie_18",
-    "dom_13"
-  ),
-  
-  datetime = ymd_hms(c(
-    "2026-05-13 08:00:00",
-    "2026-05-13 13:00:00",
-    "2026-05-13 18:00:00",
-    "2026-05-17 13:00:00"
-  ))
-)
 
 # ---------------------------------------------------------
 # LISTA PARA ALMACENAR RESULTADOS
@@ -123,7 +189,7 @@ for(s in 1:nrow(escenarios)){
   message("===================================")
 
   # Loop unidad_salud
-  for(i in 1:70){
+  for(i in 1:lenght(unidad_salud_sf){
 
     message(
       "Hospital ",
@@ -233,30 +299,46 @@ message("===================================")
 message("Total de objetos creados: ", length(resultados))
 ```
 
-## Asignacion oferta - demanda
+# Sección 4: Asignación de la capacidad de oferta a las unidades de salud
 
-**Demanada (Poblacion total atendida por zona censal)**
+::: callout-note
+## Objetivos de esta sección
 
-La población ya se encuentra en los datos importados
+1.  Importar las isócronas generadas para cada unidad de salud.
+2.  Estimar la capacidad de oferta de servicios de salud a partir del número de médicos disponibles.
+3.  Asignar la capacidad de oferta a cada establecimiento según la parroquia donde se encuentra ubicado.
+4.  Incorporar la información de oferta a las áreas de cobertura de cada unidad de salud.
+:::
 
-**Oferta (Health workforce supply: Suma de medicos, enfermeros y otros profesionales que consideremos)**
+## Importar las isócronas de las unidades de salud
 
-Importamos las isocronas creadas en el paso anterior
+La oferta de servicios de salud se representó mediante el número de profesionales disponibles en cada establecimiento. Como aproximación a la capacidad de atención, se calculó el total de médicos de atención primaria por parroquia, considerando las especialidades de medicina general, medicina familiar, pediatría, ginecología-obstetricia, odontología y medicina interna.
+
+Primero se importaron las isócronas generadas para cada unidad de salud:
 
 ```{r}
-
-iso <- st_read("../data/gpkg/isocronas_unidad_salud.gpkg")
+iso <- st_read("../data/gpkg/isocronas_unidades_salud.gpkg")
 ```
 
-Les colocamos el número random de médicos por hospital.
+## Calcular la capacidad de oferta por parroquia
+
+Posteriormente, se calculó el número total de médicos por parroquia y se asignó dicha capacidad a cada establecimiento mediante una unión espacial entre las unidades de salud y los límites parroquiales.
 
 ```{r}
 parroquias <- read_csv("../data/capacidad_pichincha_parroquias.csv")
 
-parroquias <- parroquias %>% mutate(medicos = medicina_general+medicina_familiar+pediatria+ginecologia_obstetricia+odontologia+medicina_interna,parr_ubi=as.character(parr_ubi))
+parroquias <- parroquias %>% 
+  mutate(
+    medicos = medicina_general +
+      medicina_familiar +
+      pediatria +
+      ginecologia_obstetricia +
+      odontologia +
+      medicina_interna,
+    parr_ubi = as.character(parr_ubi)
+  )
 
-df <- st_transform(df,crs = 4326)
-
+df <- st_transform(df, crs = 4326)
 df <- st_make_valid(df)
 
 unidad_interseccion <- st_join(
@@ -266,20 +348,33 @@ unidad_interseccion <- st_join(
 )
 
 parroquias <- unidad_interseccion %>% 
-  select(hospital_id = unicodigo,parroqu) %>% 
-  left_join(parroquias,by = c("parroqu"="parr_ubi")) %>% 
-  select(hospital_id,parroqu,medicos)
+  select(hospital_id = unicodigo, parroqu) %>% 
+  left_join(parroquias, by = c("parroqu" = "parr_ubi")) %>% 
+  select(hospital_id, parroqu, medicos)
 
 isocronas <- iso %>%
   left_join(as_tibble(parroquias))
 ```
 
-## Interseccion zonas censales - unidades de salud
+De esta forma, cada unidad de salud heredó la capacidad de oferta correspondiente a la parroquia en la que se encuentra ubicada.
 
-Se hace un join de los datos de las zonas censales y las isocronas de las undiades de salud.
+# Sección 5: Construcción de la matriz origen-destino de accesibilidad
+
+::: callout-note
+## Objetivos de esta sección
+
+1.  Identificar las zonas censales que se encuentran dentro del área de cobertura de cada unidad de salud.
+2.  Construir una matriz espacial que relacione la población potencialmente demandante con los establecimientos de salud accesibles.
+3.  Resolver los casos en que una misma zona censal se encuentra dentro de múltiples bandas de tiempo para un mismo establecimiento.
+:::
+
+Una vez definidas las áreas de cobertura y la capacidad de oferta de cada establecimiento, es necesario identificar qué zonas censales tienen acceso potencial a cada unidad de salud. Para ello se construye una matriz origen-destino que relaciona la población residente con los establecimientos accesibles dentro del umbral temporal definido.
+
+## Intersección entre zonas censales y áreas de cobertura
+
+Se realiza una unión espacial entre los centroides de las zonas censales y las isócronas de las unidades de salud. El resultado identifica todas las relaciones potenciales entre la población y los establecimientos de salud accesibles.
 
 ```{r}
-
 interseccion <- st_join(
   centroides_dmq,
   isocronas,
@@ -287,36 +382,139 @@ interseccion <- st_join(
 )
 ```
 
-El mismo sector puede intersectar varias isócronas de un hospital. Se conserva únicamente la observación con el menor tiempo de acceso para cada combinación de sector, hospital y escenario.
+## Seleccionar el menor tiempo de viaje por establecimiento
+
+Dado que una misma zona censal puede encontrarse dentro de múltiples isócronas de un mismo establecimiento, se conservó únicamente la observación asociada al menor tiempo de viaje para cada combinación de sector censal, unidad de salud y escenario de análisis.
 
 ```{r}
-
 interseccion <- interseccion %>% 
   group_by(sec, hospital_id, escenario) %>% 
   arrange(minutos, .by_group = TRUE) %>% 
   slice(1) %>% 
   ungroup()
-
 ```
 
-Colocamos unos pesos de prueba para cada banda.
+El resultado es una matriz origen-destino que relaciona cada sector censal con las unidades de salud accesibles dentro del umbral temporal definido.
+
+# Sección 6: Cálculo de los pesos de impedancia espacial
+
+::: callout-note
+## Objetivos de esta sección
+
+1.  Definir una función de impedancia para representar el efecto de la distancia sobre la accesibilidad.
+2.  Calcular los pesos asociados a cada banda temporal de viaje.
+3.  Asignar los pesos de impedancia a las relaciones entre zonas censales y unidades de salud.
+4.  Incorporar el componente de fricción espacial requerido para la implementación del método E2SFCA.
+:::
+
+La accesibilidad potencial no depende únicamente de la existencia de una unidad de salud dentro del área de cobertura, sino también de la facilidad con que puede alcanzarse. Para representar este fenómeno se utiliza una función gaussiana de decaimiento espacial que reduce progresivamente la influencia de los establecimientos a medida que aumenta el tiempo de viaje.
+
+## Definir la función de impedancia gaussiana
+
+La función de impedancia transforma los tiempos de viaje en factores de ponderación que posteriormente serán utilizados en el cálculo del índice de accesibilidad.
 
 ```{r}
-weights <- tibble::tibble(
-  banda = c("0-10", "10-20", "20-30"),
-  w = c(1, 0.7, 0.4)
-)
-
-interseccion <- interseccion %>% 
-  left_join(weights, by = "banda") %>% 
-  select(-c(range,minutos))
-
+impedancia <- function(mintiempo, subzonatiempo, maxtiempo){
+  beta <- -((maxtiempo - mintiempo)^2) / log(0.01)
+  
+  peso <- exp(
+    -(subzonatiempo - mintiempo)^2 / beta
+  )
+  
+  peso <- round(peso, 2)
+  
+  return(peso)
+}
 ```
 
-Calculamos la suma de la población ponderada (primer paso) para cada hospital.
+### Establecer los parámetros de la función de decaimiento
+
+La función gaussiana utilizada requiere definir un tiempo mínimo de referencia (\$d_min\$) y un tiempo máximo (\$d_max\$). El valor de 5 minutos se estableció como una aproximación al tiempo de desplazamiento más favorable que puede experimentar una persona dentro del área de estudio. En lugar de utilizar un valor de cero minutos, que implicaría ausencia total de desplazamiento y una accesibilidad teóricamente perfecta, se consideró que incluso los usuarios ubicados en las inmediaciones de un establecimiento deben invertir cierto tiempo en movilizarse hasta el servicio.
+
+Además, utilizar un tiempo mínimo distinto de cero evita que la función de impedancia concentre toda la ponderación en observaciones extremadamente cercanas al establecimiento. De esta manera, los pesos máximos se asignan a desplazamientos muy cortos pero realistas, permitiendo una transición más gradual en el decaimiento de la accesibilidad a medida que aumenta el tiempo de viaje.
+
+## Calcular los pesos para cada banda temporal
+
+Los pesos fueron calculados para cada banda temporal considerando un tiempo mínimo de referencia de 5 minutos y un tiempo máximo de 30 minutos.
+
+```{r}
+peso_NA <- NA
+
+peso_10 <- impedancia(
+  mintiempo = 5,
+  subzonatiempo = 5,
+  maxtiempo = 30
+)
+
+peso_20 <- impedancia(
+  mintiempo = 5,
+  subzonatiempo = 15,
+  maxtiempo = 30
+)
+
+peso_30 <- impedancia(
+  mintiempo = 5,
+  subzonatiempo = 25,
+  maxtiempo = 30
+)
+
+sub1 <- "0-10"
+sub2 <- "10-20"
+sub3 <- "20-30"
+```
+
+## Asignar los pesos a la matriz origen-destino
+
+Una vez calculados los factores de ponderación, estos se asignan a cada relación entre zona censal y establecimiento de salud de acuerdo con la banda temporal en la que se encuentra.
+
+```{r}
+interseccion <- interseccion %>%  
+  mutate(
+    w = case_when(
+      banda == sub1 ~ peso_10,
+      banda == sub2 ~ peso_20,
+      banda == sub3 ~ peso_30,
+      TRUE ~ peso_NA
+    )
+  )
+```
+
+## Preparar la matriz final para el cálculo del E2SFCA
+
+Finalmente, se incorporan los pesos definitivos utilizados en el análisis y se eliminan variables auxiliares que ya no son necesarias para los pasos posteriores.
+
+```{r}
+interseccion <- interseccion %>% 
+  left_join(weights, by = "banda") %>% 
+  select(-c(range, minutos))
+```
+
+Los pesos obtenidos representan la fricción espacial asociada al desplazamiento hacia los establecimientos de salud y constituyen un componente fundamental para el cálculo posterior del índice de accesibilidad mediante el método E2SFCA.
+
+# Sección 7: Cálculo de la razón oferta-demanda por unidad de salud
+
+::: callout-note
+## Objetivos de esta sección
+
+1.  Estimar la población potencialmente atendida por cada unidad de salud.
+2.  Incorporar el efecto de la distancia mediante los pesos de impedancia espacial.
+3.  Calcular la razón oferta-demanda para cada establecimiento de salud.
+:::
+
+El primer paso del método E2SFCA consiste en estimar la relación entre la capacidad de oferta de cada establecimiento y la población potencialmente demandante que se encuentra dentro de su área de cobertura. Para ello se calcula la población ponderada por los pesos de impedancia espacial y posteriormente se estima la razón entre el número de médicos disponibles y dicha población.
+
+## Calcular la población ponderada atendida por cada hospital
+
+La población potencialmente atendida por cada establecimiento se obtiene sumando la población de las zonas censales ubicadas dentro de su área de cobertura, ponderada por el peso de impedancia correspondiente a cada banda temporal.
+
+La expresión utilizada es:
 
 $$R_j = \frac{S_j}{\sum_{k \in \{d_{kj} \in D_r\}} P_k W_r} \\
 = \frac{S_j}{\sum_{k \in \{d_{kj} \in D_1\}} P_k W_1 + \sum_{k \in \{d_{kj} \in D_2\}} P_k W_2 + \sum_{k \in \{d_{kj} \in D_3\}} P_k W_3}$$
+
+donde:
+
+$S_j$ corresponde a la oferta disponible en el establecimiento $j$. $P_k$ representa la población de la zona censal $k$. $W_r$ corresponde al peso de impedancia asociado a cada banda temporal. $D_r$ representa cada una de las zonas de cobertura definidas por tiempo de viaje.
 
 ```{r}
 step1 <- interseccion %>%
@@ -324,42 +522,63 @@ step1 <- interseccion %>%
   distinct(hospital_id, sec, .keep_all = TRUE) %>% 
   group_by(hospital_id) %>% 
   summarise(
-    poblacion_atendida = sum(poblacion*w, na.rm = TRUE),
+    poblacion_atendida = sum(
+      poblacion * w.x,
+      na.rm = TRUE
+    ),
     .groups = "drop"
   )
 ```
 
-Calcular el ratio de médicos / población para cada hospital.
+## Calcular la razón oferta-demanda por hospital
+
+Una vez obtenida la población ponderada atendida, se calcula la razón oferta-demanda para cada establecimiento. Esta razón representa la disponibilidad relativa de médicos para la población que potencialmente puede acceder a dicho establecimiento.
 
 ```{r}
-
-# PASO 2: Unir los médicos variables con la población fija y calcular el ratio
 resultado_ratios <- interseccion %>%
   st_drop_geometry() %>%
   
-  # 1. Agrupamos por hospital y escenario para aislar los médicos de cada momento
-  group_by(hospital_id, escenario) %>%
+  group_by(
+    hospital_id,
+    escenario
+  ) %>%
   summarise(
-    # Extraemos el número de médicos de ese hospital en ese escenario específico.
-    # Usamos first() si el número de médicos es un atributo único del hospital en ese momento.
-    total_medicos = first(medicos), 
+    total_medicos = first(medicos),
     .groups = "drop"
   ) %>%
   
-  # 2. Traemos la población atendida fija que calculamos en el Paso 1
-  left_join(step1, by = "hospital_id") %>%
+  left_join(
+    step1,
+    by = "hospital_id"
+  ) %>%
   
-  # 3. Tu fórmula final: médicos entre población atendida
   mutate(
-    ratio_final = total_medicos / poblacion_atendida
+    ratio_final =
+      total_medicos /
+      poblacion_atendida
   )
 ```
 
-## Calcular la accesibilidad
+El resultado de este procedimiento es un conjunto de razones oferta-demanda ($R_j$) para cada establecimiento y escenario de análisis, que posteriormente serán utilizadas para estimar la accesibilidad de la población.
 
-Calculamos para cada zona censal $i$, la accesibilidad es la suma de los ratios $R_j$​ de todos los hospitales accesibles, ponderados por el peso de la banda temporal en la que cae cada hospital:
+# Sección 8: Cálculo del índice de accesibilidad E2SFCA
 
-$$\begin{aligned}
+::: callout-note
+## Objetivos de esta sección
+
+1.  Integrar la oferta disponible de todos los establecimientos accesibles para cada zona censal.
+2.  Calcular el índice de accesibilidad potencial para cada zona censal.
+3.  Generar indicadores comparables entre los diferentes escenarios temporales analizados.
+:::
+
+El segundo paso del método E2SFCA consiste en calcular la accesibilidad potencial de cada zona censal. Para ello se suman las razones oferta-demanda de todos los establecimientos accesibles, ponderadas según la banda temporal en la que se encuentra cada establecimiento respecto a la población analizada.
+
+## Calcular la accesibilidad potencial por zona censal
+
+La accesibilidad potencial para una zona censal $i$ se define como:
+
+$$
+\begin{aligned}
 A_i^F
 &= \sum_{j \in \{d_{ij} \in D_r\}} R_j W_r \\
 &= \sum_{j \in \{d_{ij} \in D_1\}} R_j W_1
@@ -367,53 +586,109 @@ A_i^F
 + \sum_{j \in \{d_{ij} \in D_3\}} R_j W_3
 \end{aligned}$$
 
+donde:
+
+$A_i^F$ corresponde al nivel de accesibilidad de la zona censal $i$. $R_j$ representa la razón oferta-demanda del establecimiento $j$. $W_r$ corresponde al peso de impedancia asociado a la banda temporal de viaje.
+
 ```{r}
 accesibilidad <- interseccion %>%
   st_drop_geometry() %>%
   
-  # Traer el ratio Rj de cada hospital para cada escenario
   left_join(
     resultado_ratios %>%
-      select(hospital_id, escenario, ratio_final),
-    by = c("hospital_id", "escenario")
+      select(
+        hospital_id,
+        escenario,
+        ratio_final
+      ),
+    by = c(
+      "hospital_id",
+      "escenario"
+    )
   ) %>%
   
-  # Traer el peso de la banda temporal
   left_join(
     weights,
     by = "banda"
   ) %>%
   
-  # Rj * Wr
   mutate(
-    contribucion = ratio_final * w.x
+    contribucion =
+      ratio_final * w
   ) %>%
   
-  # Σ(Rj * Wr)
-  group_by(sec, escenario) %>%
+  group_by(
+    sec,
+    escenario
+  ) %>%
   summarise(
-    accesibilidad = sum(contribucion, na.rm = TRUE),
+    accesibilidad =
+      sum(
+        contribucion,
+        na.rm = TRUE
+      ),
     .groups = "drop"
-  ) %>% 
-  mutate(indice = accesibilidad/mean(accesibilidad, na.rm = T))
+  ) %>%
+  mutate(
+    indice =
+      accesibilidad /
+      mean(
+        accesibilidad,
+        na.rm = TRUE
+      )
+  )
 ```
 
-Ahora si quedaron pequeños. Quedó cool
+## Estandarizar el índice de accesibilidad
+
+Con el objetivo de facilitar la comparación espacial entre zonas censales, la accesibilidad se normaliza dividiendo cada valor por la media del escenario correspondiente.
+
+De esta manera:
+
+-   Valores mayores a 1 indican accesibilidad superior al promedio.
+-   Valores cercanos a 1 indican accesibilidad promedio.
+-   Valores menores a 1 indican accesibilidad inferior al promedio.
+
+El resultado final corresponde al índice de accesibilidad espacial E2SFCA utilizado en el análisis.
+
+## Seleccionar zonas con baja accesibilidad
+
+Una vez calculado el índice de accesibilidad, es posible identificar las zonas censales con menores niveles de acceso potencial a los servicios de salud. Estas áreas pueden constituir territorios prioritarios para intervenciones orientadas a mejorar la cobertura o la distribución de recursos sanitarios.
+
+Se identifican aquellas zonas censales cuyo índice es inferior al promedio y que presentan niveles particularmente bajos de accesibilidad.
 
 ```{r}
 no_accesibles <- accesibilidad %>%
-  mutate(dummy_menor = indice < 1,
-         dummy_igual = indice == 1,
-         dummy_mayor = indice > 1)  %>%
-  filter(dummy_menor,
-         indice > 0 ,
-         indice < 0.25) %>% 
+  mutate(
+    dummy_menor = indice < 1,
+    dummy_igual = indice == 1,
+    dummy_mayor = indice > 1
+  ) %>%
+  filter(
+    dummy_menor,
+    indice > 0,
+    indice < 0.25
+  ) %>%
   arrange(indice)
+```
 
+## Preparar la visualización espacial
 
-no_accesibles_puntos <- centroides_dmq %>% 
-  right_join(no_accesibles %>% distinct(sec))
+Las zonas identificadas se vinculan nuevamente con los centroides censales para facilitar su representación cartográfica.
 
+```{r}
+no_accesibles_puntos <- centroides_dmq %>%
+  right_join(
+    no_accesibles %>%
+      distinct(sec)
+  )
+```
+
+## Visualizar las zonas con baja accesibilidad
+
+Finalmente, se representa la localización de las unidades de salud y de las zonas censales con baja accesibilidad mediante un mapa interactivo.
+
+```{r}
 leaflet() |>
   addTiles() |>
   addCircleMarkers(
@@ -427,3 +702,5 @@ leaflet() |>
     color = "red"
   )
 ```
+
+Los puntos rojos representan zonas censales con niveles particularmente bajos de accesibilidad relativa, mientras que los puntos azules corresponden a las unidades de salud consideradas en el análisis.
