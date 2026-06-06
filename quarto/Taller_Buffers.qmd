@@ -1,0 +1,167 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+```{r}
+
+library(sf)
+library(tidyverse)
+library(leaflet)
+library(hereR)
+library(lubridate)
+
+```
+
+**Unidades de salud A, B y C**
+
+Se importan las unidades de salud en Pichincha.
+
+```{r}
+# Unidades de salud A, B y C
+unidad_salud <- read_csv("../data/cs_pichincha_isocronas_input.csv")
+
+# Convertirlas a objetos sf
+unidad_salud_sf <- st_as_sf(
+  unidad_salud,
+  coords = c("lon", "lat"),  # primero X (longitud), luego Y (latitud)
+  crs = 4326                 # WGS84
+)
+
+unidad_salud_sf <- st_transform(
+  unidad_salud_sf,
+  32717
+)
+
+rm("unidad_salud")
+
+```
+
+**Zonas censales de pichincha**
+
+Se obtuvieron los centroides de los poligonos que representan las zonas censales de pichincha.
+
+```{r}
+df <- readRDS("../data/rds/poblacion_poligonos_pichincha.rds")
+
+centroides_dmq <- st_centroid(df)  %>% 
+  select(sec, poblacion)
+
+st_crs(centroides_dmq)
+
+rm("df")
+
+```
+
+```{r}
+distancias <- c(5000, 10000, 15000)
+
+buffers_final <- purrr::map_dfr(
+  distancias,
+  ~ st_buffer(unidad_salud_sf, dist = .x) %>%
+    mutate(
+      distancia_m = .x,
+      distancia_km = .x / 1000,
+      banda = case_when(
+        distancia_km == 5  ~ "0-5",
+        distancia_km == 10 ~ "5-10",
+        distancia_km == 15 ~ "10-15"
+      )
+    )
+)
+```
+
+```{r}
+buffers <- buffers_final %>%
+  group_by(unicodigo) %>%
+  mutate(medicos = sample(5:20, 1)) %>%
+  ungroup() 
+```
+
+```{r}
+interseccion_buffers <- st_join(
+  centroides_dmq,
+  buffers,
+  join = st_intersects
+)
+```
+
+```{r}
+interseccion_buffers <- interseccion_buffers %>% 
+  group_by(sec, unicodigo) %>% 
+  arrange(banda, .by_group = TRUE) %>% 
+  slice(1) %>% 
+  ungroup()
+
+```
+
+```{r}
+weights <- tibble::tibble(
+  banda = c("0-5", "5-10", "10-15"),
+  w = c(1, 0.7, 0.4)
+)
+
+interseccion_buffers <- interseccion_buffers %>% 
+  left_join(weights, by = "banda")
+
+```
+
+```{r}
+step1 <- interseccion_buffers %>%
+  st_drop_geometry() %>%
+  distinct(unicodigo, sec, .keep_all = TRUE) %>% 
+  group_by(unicodigo) %>% 
+  summarise(
+    poblacion_atendida = sum(poblacion*w, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+```{r}
+
+# PASO 2: Unir los médicos variables con la población fija y calcular el ratio
+resultado_ratios <- interseccion_buffers %>%
+  st_drop_geometry() %>%
+  
+  # 1. Agrupamos por hospital y escenario para aislar los médicos de cada momento
+  group_by(unicodigo) %>%
+  summarise(
+    # Extraemos el número de médicos de ese hospital en ese escenario específico.
+    # Usamos first() si el número de médicos es un atributo único del hospital en ese momento.
+    total_medicos = first(medicos), 
+    .groups = "drop"
+  ) %>%
+  
+  # 2. Traemos la población atendida fija que calculamos en el Paso 1
+  left_join(step1, by = "unicodigo") %>%
+  
+  # 3. Tu fórmula final: médicos entre población atendida
+  mutate(
+    ratio_final = total_medicos / poblacion_atendida
+  )
+```
+
+```{r}
+accesibilidad <- interseccion_buffers %>%
+  st_drop_geometry() %>%
+  
+  # Traer el ratio Rj de cada hospital para cada escenario
+  left_join(
+    resultado_ratios %>%
+      select(unicodigo, ratio_final),
+    by = c("unicodigo")
+  ) %>%
+
+  # Rj * Wr
+  mutate(
+    contribucion = ratio_final * w
+  ) %>%
+  
+  # Σ(Rj * Wr)
+  group_by(sec) %>%
+  summarise(
+    accesibilidad = sum(contribucion, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
