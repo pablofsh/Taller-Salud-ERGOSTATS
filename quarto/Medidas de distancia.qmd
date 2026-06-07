@@ -1,0 +1,435 @@
+---
+title: "Medidas de distancia"
+format: html
+editor: visual
+---
+
+Tiempo de viaje mínimo sobre la red vial (network travel time), obtenido mediante una matriz origen-destino.
+
+# Introducción
+
+En este taller se estima la accesibilidad geográfica a servicios de salud utilizando **tiempo de viaje sobre red vial** como medida de distancia.
+
+A diferencia de la distancia euclidiana (línea recta), la accesibilidad real depende de la infraestructura de transporte disponible. Por ello, se utiliza una **red vial** que permite modelar rutas reales de desplazamiento.
+
+Para esto se emplea el paquete dodgr, que permite:
+
+-   Construir redes de transporte a partir de datos geoespaciales
+-   Representar la red como un grafo
+-   Calcular rutas de mínimo costo entre orígenes y destinos
+-   Estimar matrices origen–destino (OD) de tiempos de viaje
+
+## Conceptos clave: grafos y red vial en `dodgr`
+
+Antes de ejecutar el análisis, es importante entender tres elementos fundamentales:
+
+-   **Red vial:** Es el conjunto de calles, carreteras y conexiones espaciales por donde puede desplazarse un usuario.
+
+-   **Grafo:** `dodgr` transforma la red vial en un grafo dirigido ponderado, compuesto por:
+
+    -   *Nodos (vertices):* intersecciones o puntos de conexión
+
+    -   *Aristas (edges):* segmentos de calle entre nodos
+
+-   **Matriz OD:** Una matriz origen–destino contiene el costo (tiempo) entre cada par de puntos:
+
+    -   *Filas:* sectores censales (orígenes)
+    -   *Columnas:* hospitales (destinos)
+    -   *Valores:* tiempo mínimo de viaje
+
+# Sección 1: Construcción de la red vial
+
+::: callout-note
+### Objetivos de la sección
+
+1.  Construir una red vial representativa del área de estudio a partir de datos abiertos.
+2.  Filtrar y depurar las vías relevantes para movilidad vehicular.
+3.  Asegurar la coherencia espacial mediante la estandarización del sistema de referencia. . Preparar los insumos necesarios para el cálculo de accesibilidad mediante análisis de redes en dodgr.
+:::
+
+En esta sección se construye la base espacial del análisis de accesibilidad: la red vial. Esta red permite modelar desplazamientos reales entre zonas censales y establecimientos de salud, reemplazando medidas geométricas simples por rutas basadas en infraestructura de transporte.
+
+Los datos de red vial provienen de Geofabrik (OpenStreetMap), una fuente abierta de información geoespacial global. El archivo en formato GeoPackage (.gpkg) fue descargado y posteriormente depurado y estructurado para el área de estudio, eliminando geometrías inconsistentes y seleccionando únicamente aquellas capas relevantes para análisis de movilidad.
+
+## Importar y filtrar la red vial
+
+Se importa la red vial y se seleccionan únicamente las categorías relevantes para transporte en automovil.
+
+```{r}
+library(sf)
+library(dplyr)
+library(dodgr)
+library(nngeo)
+library(tidyr)
+
+vias <- st_read(
+  "../data/gpkg/lineas_pichincha_geom_corregida.gpkg",
+  layer = "exploded",
+  quiet = TRUE
+)
+
+vias_auto <- vias %>%
+  filter(
+    highway %in% c(
+      "trunk",
+      "trunk_link",
+      "primary",
+      "primary_link",
+      "secondary",
+      "secondary_link",
+      "tertiary",
+      "tertiary_link",
+      "residential",
+      "unclassified",
+      "living_street",
+      "service"
+    )
+  )
+```
+
+## Estandarización del sistema de referencia espacial
+
+Para garantizar consistencia espacial en el análisis de redes, todos los datasets se proyectan al mismo sistema de referencia (WGS84 – EPSG:4326). Esto es necesario porque dodgr trabaja de forma nativa con coordenadas geográficas.
+
+```{r}
+centroides <- st_transform(centroides_dmq, 4326)
+
+hospitales <- st_transform(
+  unidad_salud_sf,
+  4326
+)
+
+vias_auto <- st_transform(
+  vias_auto,
+  4326
+)
+```
+
+A partir de este punto, la red vial está lista para ser convertida en un grafo de transporte. Este grafo será la estructura base que permitirá calcular rutas óptimas y tiempos de viaje entre orígenes (sectores censales) y destinos (establecimientos de salud) en las siguientes etapas del análisis.
+
+# Sección 2: Construcción del grafo de transporte y matriz origen–destino con dodgr
+
+::: callout-note
+## Objetivos de esta sección
+
+1.  Convertir la red vial en una estructura de grafo de transporte.
+2.  Definir la lógica de conectividad espacial mediante nodos (vértices) y aristas (segmentos).
+3.  Asignar pesos de desplazamiento basados en el perfil de movilidad motorizada.
+4.  Estimar la matriz origen–destino de tiempos de viaje entre sectores censales y hospitales.
+:::
+
+Una vez preparada la red vial, el siguiente paso consiste en transformarla en un grafo de transporte. Este grafo es una representación matemática de la red donde:
+
+-   Los vértices (nodes) representan intersecciones o puntos de conexión vial.
+-   Las aristas (edges) representan segmentos de carretera entre dos nodos.
+-   Los pesos representan el costo de desplazamiento (en este caso, tiempo de viaje).
+
+El paquete dodgr convierte la red vial en un grafo dirigido y ponderado, permitiendo calcular rutas óptimas mediante algoritmos de camino mínimo (shortest path).
+
+Este enfoque es fundamental en análisis de accesibilidad porque permite estimar tiempos de viaje realistas en lugar de distancias euclidianas.
+
+## Construir el grafo vial
+
+La red vial previamente filtrada se transforma en un grafo utilizando un perfil de transporte motorizado (motorcar), que asigna velocidades y costos típicos de desplazamiento según el tipo de vía.
+
+```{r}
+graph <- weight_streetnet(
+  vias_auto,
+  wt_profile = "motorcar"
+)
+```
+
+`weight_streetnet()` realiza tres procesos principales:
+
+-   Descomposición de la red vial en segmentos (edges)
+
+-   Construcción de nodos (vertices) en intersecciones
+
+-   Asignación de pesos (tiempo de viaje estimado) según el tipo de vía
+
+El resultado es un grafo listo para análisis de rutas.
+
+## Construcción de la matriz origen–destino (OD)
+
+Una vez definido el grafo, se calculan los tiempos de viaje entre todos los pares de origen (sectores censales) y destino (hospitales).
+
+```{r}
+tiempos <- dodgr_times(
+  graph,
+  from = st_coordinates(centroides),
+  to = st_coordinates(hospitales))
+
+```
+
+El resultado es una matriz donde:
+
+-   Filas: centroides censales (orígenes)
+-   Columnas: hospitales (destinos)
+-   Valores: tiempo mínimo de viaje sobre la red vial (en segundos)
+
+Cada celda representa el costo óptimo de desplazamiento entre un sector censal y un establecimiento de salud.
+
+## Consideraciones metodológicas
+
+-   Si no existe conexión entre un origen y un destino, el valor será NA o Inf.
+-   El cálculo depende de la conectividad del grafo y la calidad de la red vial.
+-   Este paso asume que los desplazamientos siguen únicamente la red vial modelada.
+
+# Sección 3: Control de calidad de la conectividad de la red
+
+::: callout-note
+## Objetivos de esta sección
+
+1.  Identificar centroides censales sin conexión a la red vial.
+2.  Evaluar la distancia entre dichos centroides y la infraestructura de transporte disponible.
+3.  Corregir automáticamente los casos asociados a pequeñas imprecisiones geométricas.
+4.  Excluir los casos que permanecen desconectados de la red.
+:::
+
+Durante la construcción de la matriz origen-destino pueden aparecer centroides censales sin rutas válidas hacia los establecimientos de salud. Esta situación suele ocurrir cuando el centroide se localiza lejos de la red vial o cuando existen limitaciones en la cobertura de OpenStreetMap.
+
+Antes de excluir observaciones, se evalúa si los centroides desconectados se encuentran suficientemente cerca de la red como para asumir que la falta de conexión responde únicamente a una imprecisión geométrica.
+
+## Extracción de vértices de la red
+
+Los vértices representan los puntos de conexión del grafo y son utilizados para el “snap” de puntos de origen y destino a la red.
+
+```{r}  verts <- dodgr_vertices(graph)}
+```
+
+Cada vértice contiene:
+
+-   Coordenadas geográficas (x, y)
+-   Identificador único del nodo
+-   Posición dentro de la red vial
+
+Estos puntos son esenciales para conectar los centroides censales y hospitales al grafo.
+
+## Identificar centroides desconectados
+
+Se consideran desconectados aquellos centroides que no presentan una ruta válida hacia ninguno de los establecimientos de salud.
+
+```{r}
+na_por_centroide <- rowSums(
+  is.na(tiempos_test)
+)
+
+centroides_desconectados <- centroides[
+  na_por_centroide == ncol(tiempos_test),
+]
+```
+
+## Obtener los vértices de la red vial
+
+Los vértices representan los nodos del grafo utilizado por dodgr para calcular rutas y tiempos de viaje.
+
+```{r}
+verts_sf <- verts %>%
+  st_as_sf(
+    coords = c("x", "y"),
+    crs = 4326
+  )
+```
+
+## Calcular la distancia al vértice más cercano
+
+Para cada centroide desconectado se identifica el vértice más próximo de la red vial.
+
+```{r}
+idx_nearest <- st_nearest_feature(
+  centroides_desconectados,
+  verts_sf
+)
+
+distancias <- st_distance(
+  centroides_desconectados,
+  verts_sf[idx_nearest, ],
+  by_element = TRUE
+)
+
+summary(as.numeric(distancias))
+```
+
+## Corregir centroides próximos a la red
+
+Se consideran corregibles aquellos centroides localizados a menos de 500 metros del vértice más cercano. En estos casos se asume que la desconexión responde a una diferencia mínima entre la posición del centroide y la red vial.
+
+```{r}
+umbral_snap <- 500
+
+distancias_m <- as.numeric(distancias)
+
+idx_rescatables <- which(
+  distancias_m <= umbral_snap
+)
+```
+
+Se crea una copia de los centroides originales y se reemplaza la geometría de los centroides corregibles por la ubicación del vértice más cercano.
+
+```{r}
+centroides_corregidos <- centroides
+
+ids_desconectados <- which(
+  rowSums(is.na(tiempos_test)) == ncol(tiempos_test)
+)
+
+ids_a_corregir <- ids_desconectados[
+  idx_rescatables
+]
+
+centroides_corregidos[
+  ids_a_corregir,
+]$geometry <- verts_sf[
+  idx_nearest[idx_rescatables],
+]$geometry
+```
+
+## Excluir centroides persistentemente desconectados
+
+Tras la corrección, se recalcula la matriz origen-destino para verificar qué centroides continúan sin conexión.
+
+```{r}
+tiempos_corregidos <- dodgr_times(
+  graph,
+  from = st_coordinates(
+    centroides_corregidos
+  ),
+  to = st_coordinates(
+    hospitales
+  )
+)
+```
+
+# Sección 4: Cálculo de tiempos mínimos de acceso y análisis de accesibilidad
+
+::: callout-note
+## Objetivos de esta sección
+
+1.  Estimar el tiempo mínimo de viaje desde cada sector censal al establecimiento de salud más cercano.
+2.  Resumir la distribución de los tiempos de acceso a nivel poblacional.
+3.  Evaluar la cobertura poblacional bajo distintos umbrales de tiempo.
+4.  Explorar la distribución espacial y estadística de la accesibilidad.
+:::
+
+Una vez construida la matriz origen–destino de tiempos de viaje, el siguiente paso consiste en derivar una métrica de accesibilidad básica: el tiempo mínimo de acceso a servicios de salud.
+
+Esta medida representa, para cada sector censal, el tiempo más corto necesario para alcanzar cualquier establecimiento de salud dentro de la red vial. Es una métrica ampliamente utilizada en estudios de accesibilidad porque resume la proximidad funcional del sistema de salud desde el punto de vista del usuario.
+
+## Cálculo del tiempo mínimo de viaje
+
+Para cada sector censal se selecciona el hospital más cercano en términos de tiempo de viaje sobre la red vial. Esta suele ser la métrica más intuitiva.
+
+Para cada sector censal:
+
+```{r}
+tiempo_min <- apply(
+  tiempos_corregidos,
+  1,
+  min,
+  na.rm = TRUE
+)
+```
+
+Los tiempos originalmente se encuentran en segundos, por lo que se convierten a minutos para facilitar su interpretación. Además los valores infinitos o no definidos representan sectores sin conectividad efectiva dentro del sistema de red. Estos se recodifican como valores faltantes (NA) para evitar sesgos en los análisis estadísticos.
+
+```{r}
+
+tiempo_min <- tiempo_min / 60
+centroides$tiempo_min <- tiempo_min
+tiempo_min[!is.finite(tiempo_min)] <- NA
+```
+
+## Estadísticas descriptivas del tiempo de acceso
+
+Se genera un resumen estadístico de la distribución de los tiempos de viaje.
+
+```{r}
+resumen_tiempo <- tibble(
+  tiempo_min = tiempo_min
+) %>%
+  summarise(
+    n = sum(is.finite(tiempo_min)),
+    media = mean(tiempo_min, na.rm = TRUE),
+    mediana = median(tiempo_min, na.rm = TRUE),
+    sd = sd(tiempo_min, na.rm = TRUE),
+    min = min(tiempo_min, na.rm = TRUE),
+    max = max(tiempo_min, na.rm = TRUE),
+    p5 = quantile(tiempo_min, 0.05, na.rm = TRUE),
+    p25 = quantile(tiempo_min, 0.25, na.rm = TRUE),
+    p75 = quantile(tiempo_min, 0.75, na.rm = TRUE),
+    p95 = quantile(tiempo_min, 0.95, na.rm = TRUE)
+  )
+
+resumen_tiempo
+```
+
+## Cobertura poblacional bajo umbrales de tiempo
+
+Se evalúa qué proporción de la población tiene acceso a servicios de salud dentro de distintos umbrales de tiempo.
+
+```{r}
+pob_total <- sum(centroides$poblacion, na.rm = TRUE)
+
+resumen_umbrales <- tibble(
+  umbral = c(5, 10, 15, 20, 30, 45, 60)
+) %>%
+  mutate(
+    poblacion_cubierta = map_dbl(
+      umbral,
+      ~ sum(centroides$poblacion[tiempo_min <= .x], na.rm = TRUE)
+    ),
+    porcentaje = 100 * poblacion_cubierta / pob_total
+  )
+
+resumen_umbrales
+```
+
+## Curva de cobertura acumulada
+
+Se visualiza la relación entre tiempo de viaje y proporción acumulada de población con acceso.
+
+```{r}
+ggplot(
+  resumen_umbrales,
+  aes(x = umbral, y = porcentaje)
+) +
+  geom_line() +
+  geom_point() +
+  labs(
+    x = "Tiempo de viaje (min)",
+    y = "% acumulado de población",
+    title = "Cobertura acumulada de acceso a servicios de salud"
+  )
+```
+
+## Distribución de los tiempos mínimos de acceso
+
+Se explora la forma de la distribución de los tiempos de viaje mediante una estimación de densidad.
+
+```{r}
+ggplot(
+  data.frame(tiempo_min = tiempo_min),
+  aes(x = tiempo_min)
+) +
+  geom_density(fill = "steelblue", alpha = 0.4) +
+  geom_vline(
+    xintercept = quantile(tiempo_min, c(0.25, 0.5, 0.75), na.rm = TRUE),
+    linetype = "dashed"
+  ) +
+  labs(
+    x = "Tiempo mínimo (min)",
+    y = "Densidad",
+    title = "Distribución del acceso a servicios de salud"
+  )
+```
+
+## Mapa de accesibilidad espacial
+
+Se visualiza la distribución espacial del tiempo mínimo de acceso a servicios de salud.
+
+```{r}
+ggplot(centroides) +
+  geom_sf(aes(color = tiempo_min)) +
+  scale_color_viridis_c() +
+  labs(color = "Minutos")
+```
