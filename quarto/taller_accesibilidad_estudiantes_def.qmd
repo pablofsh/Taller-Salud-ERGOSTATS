@@ -1,0 +1,1048 @@
+---
+title: "Calculating spatial accessibility to health services using R"
+subtitle: "Advance Workshop on Strategic Spatial Analytics and Application on R-Based Geospatial Intelligence — ERGOSTATS [10:00–13:00]"
+author: "Alex Bajaña & Gary Santiana"
+date: last-modified
+lang: en
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    smooth-scroll: true
+    title-block-banner: true
+    title-block-logo: logo.png
+    df-print: kable
+    code-fold: show
+    css: styles.css
+execute:
+  echo: true
+  warning: false
+  error: false
+  message: false
+  eval: true
+---
+
+# Introduction
+
+Spatial accessibility to health services is a key dimension of health equity. It captures not only whether services exist, but whether people can actually reach them. In this workshop we implement the **Enhanced Two-Step Floating Catchment Area (E2SFCA)** method using two approaches to define catchment areas:
+
+- **Isochrones**: travel-time polygons computed from the real road network via the HERE API.
+- **Buffers**: Euclidean distance rings, a simpler alternative when network data is unavailable or computation time is a constraint.
+
+Running both methods side by side lets us evaluate how the choice of catchment geometry affects the final results — and when each approach is appropriate.
+
+::: callout-note
+## Workshop objectives
+
+1. Prepare spatial data for an accessibility analysis in Pichincha province.
+2. Build catchment areas using isochrones and Euclidean buffers.
+3. Assign doctor supply and census demand to each catchment.
+4. Compute the E2SFCA accessibility index under both approaches.
+5. Identify coverage gaps and compare the spatial patterns produced by each method.
+:::
+
+---
+
+# Section 1: Data preparation
+
+::: callout-note
+## Objectives
+
+1. Import health facilities as spatial supply points.
+2. Import census zones representing the demand population.
+3. Map the population distribution across the study area.
+4. Ensure all datasets share a compatible coordinate reference system.
+:::
+
+Before computing any accessibility measure we need clean, correctly projected spatial data. Health facilities are our supply points; census zone centroids represent where the population lives.
+
+## Load libraries
+
+```{r librerias}
+library(sf)          # Spatial data manipulation
+library(tidyverse)   # Data wrangling
+library(leaflet)     # Interactive maps
+library(hereR)       # HERE API — isochrone generation
+library(lubridate)   # Date and time handling
+```
+
+## Import health facilities
+
+The facilities dataset is a CSV with longitude and latitude columns. We convert it to an `sf` object in WGS84 (EPSG:4326) for geographic operations and reproject to UTM zone 17S (EPSG:32717) for buffer construction, which requires distances in metres.
+
+```{r unidades_salud}
+unidad_salud <- read_csv(
+  "../data/cs_pichincha_isocronas_input.csv"
+)
+
+# Geographic CRS — used with isochrones and leaflet
+unidad_salud_sf <- st_as_sf(
+  unidad_salud,
+  coords = c("lon", "lat"),
+  crs    = 4326
+)
+
+# Projected CRS in metres — used for buffer construction
+unidad_salud_sf_metros <- st_transform(
+  unidad_salud_sf,
+  32717
+)
+
+rm("unidad_salud")
+```
+
+## Import census zones
+
+The census polygons include a population count per zone. We extract centroids to represent each zone as a single demand point, keeping both a geographic and a projected version for each analysis branch.
+
+```{r zonas_censales}
+df <- readRDS(
+  "../data/rds/poblacion_poligonos_pichincha.rds"
+)
+
+# Ensure the base polygons are in geographic CRS and valid
+df <- st_transform(df, crs = 4326)
+df <- st_make_valid(df)
+
+# Parish-level aggregation for boundary overlays
+prr <- df %>% group_by(parroqu) %>% summarise()
+
+# Isochrone branch: geographic CRS
+centroides_dmq <- st_centroid(df) %>%
+  st_transform(4326) %>%
+  select(sec, poblacion)
+
+# Buffer branch: projected CRS (metres)
+centroides_dmq_metros <- st_centroid(df) %>%
+  select(sec, poblacion)
+```
+
+## Population map
+
+Before any analysis it is useful to see how the population is distributed across the study area. Densely populated urban zones will have very different accessibility dynamics from sparse rural ones.
+
+```{r mapa_poblacion}
+paleta_pob <- colorNumeric(
+  palette  = "YlOrRd",
+  domain   = df$poblacion,
+  na.color = "grey80"
+)
+
+leaflet(df) |>
+  addTiles() |>
+  addPolygons(
+    fillColor   = ~paleta_pob(poblacion),
+    fillOpacity = 0.7,
+    color       = "white",
+    weight      = 0.5,
+    popup       = ~paste0("Zone: ", sec, "<br>Population: ", poblacion)
+  ) |>
+  addCircleMarkers(
+    data   = unidad_salud_sf,
+    radius = 4,
+    color  = "blue",
+    label  = ~unicodigo,
+    group  = "Health facilities"
+  ) |>
+  addLegend(
+    "topright",
+    pal    = paleta_pob,
+    values = ~poblacion,
+    title  = "Population per zone",
+    opacity = 1
+  ) |>
+  addLayersControl(
+    overlayGroups = "Health facilities",
+    options       = layersControlOptions(collapsed = FALSE)
+  )
+```
+
+---
+
+# Section 2: Catchment area construction
+
+This is the first major methodological decision. We build catchment areas using two strategies and carry both forward through the rest of the analysis.
+
+## 2A — Isochrones (network travel-time based)
+
+::: callout-note
+## Objectives
+
+1. Understand what isochrones represent and how they are generated.
+2. Load pre-computed isochrones for all 117 facilities.
+3. Map the total coverage of the isochrone network.
+:::
+
+An isochrone is a polygon that encloses all points reachable within a given travel time from an origin, following the actual road network. This makes isochrones far more realistic than circles: they expand along highways and contract in areas with poor connectivity.
+
+We use three concentric bands per facility: **0–10 min**, **10–20 min**, and **20–30 min**. These were computed using the HERE Routing API with real road conditions.
+
+::: callout-important
+**Limitation of this dataset:** the HERE API returned identical isochrone geometries across different times of day for most facilities in this area. This is a known issue with the free-tier API in regions where HERE has limited traffic data. For the purposes of this workshop we treat the isochrones as a single time-invariant catchment geometry. A discussion of this limitation is included in Section 7.
+:::
+
+### Generate isochrones (reference code — do not run)
+
+The code below shows how the isochrones were produced. It is set to `eval=FALSE` because it requires an API key and takes several minutes to run.
+
+```{r isocronas_loop, eval=FALSE}
+# =========================================================
+# ISOCHRONE GENERATION — reference only
+# 117 facilities × 3 time bands = 351 polygons
+# =========================================================
+
+hereR::set_key("YOUR_KEY_HERE")
+
+resultados <- list()
+contador   <- 1
+
+for (i in 1:nrow(unidad_salud_sf)) {
+
+  message("Facility ", i, " of ", nrow(unidad_salud_sf))
+
+  tryCatch({
+
+    isocrona <- isoline(
+      poi        = unidad_salud_sf[i, ],
+      range      = seq(10, 30, 10) * 60,
+      range_type = "time",
+      datetime   = ymd_hms("2026-05-13 13:00:00"),
+      traffic    = TRUE,
+      transport_mode = "car"
+    )
+
+    isocrona <- isocrona %>%
+      mutate(
+        hospital_id = unidad_salud_sf$unicodigo[i],
+        minutos     = range / 60,
+        banda       = case_when(
+          minutos == 10 ~ "0-10",
+          minutos == 20 ~ "10-20",
+          minutos == 30 ~ "20-30"
+        )
+      )
+
+    resultados[[contador]] <- isocrona
+    contador <- contador + 1
+
+    Sys.sleep(1)
+
+  }, error = function(e) {
+    message("ERROR — facility ", i)
+    message(e)
+  })
+}
+
+isocronas_final <- bind_rows(resultados)
+
+st_write(
+  isocronas_final,
+  dsn          = "../data/gpkg/isocronas_clean.gpkg",
+  layer        = "isocronas",
+  delete_layer = TRUE
+)
+```
+
+### Load pre-computed isochrones
+
+```{r cargar_isocronas}
+iso <- st_read("../data/gpkg/isocronas_clean.gpkg")
+```
+
+### Coverage map — isochrones
+
+Not every census zone centroid falls inside an isochrone. This is a real limitation: facilities concentrate in urban areas and their catchments may not reach remote zones. We identify and map the uncovered zones here so we can handle them properly in the index calculation.
+
+```{r cobertura_iso}
+# Union of all isochrone polygons into a single coverage area
+cobertura_iso <- iso %>%
+  st_set_geometry("geom") %>%
+  st_union() %>%
+  st_make_valid() %>%
+  st_as_sf() %>%
+  filter(!st_is_empty(x)) %>%
+  st_collection_extract("POLYGON") %>%
+  st_union()
+
+# Census centroids outside any isochrone
+fuera_iso <- centroides_dmq %>%
+  filter(!lengths(st_intersects(., cobertura_iso)))
+
+message(nrow(fuera_iso), " of ", nrow(centroides_dmq),
+        " centroids outside isochrone coverage (",
+        round(100 * nrow(fuera_iso) / nrow(centroides_dmq), 1), "%)")
+```
+
+```{r mapa_cobertura_iso}
+cobertura_iso_sf <- st_as_sf(data.frame(geometry = cobertura_iso))
+
+leaflet() |>
+  addTiles() |>
+  addPolygons(
+    data        = cobertura_iso_sf,
+    fillColor   = "steelblue",
+    fillOpacity = 0.25,
+    color       = "steelblue",
+    weight      = 1,
+    group       = "Isochrone coverage"
+  ) |>
+  addCircleMarkers(
+    data   = unidad_salud_sf,
+    radius = 4,
+    color  = "blue",
+    label  = ~unicodigo,
+    group  = "Facilities"
+  ) |>
+  addCircleMarkers(
+    data   = fuera_iso,
+    radius = 4,
+    color  = "red",
+    label  = "Outside coverage",
+    group  = "Outside coverage"
+  ) |>
+  addLayersControl(
+    overlayGroups = c("Isochrone coverage", "Facilities", "Outside coverage"),
+    options       = layersControlOptions(collapsed = FALSE)
+  )
+```
+
+---
+
+## 2B — Buffers (Euclidean distance based)
+
+::: callout-note
+## Objectives
+
+1. Generate circular catchment areas of 5, 10, and 15 km.
+2. Assess how much of the census territory they cover.
+3. Compare coverage against the isochrone approach.
+:::
+
+Buffers are perfect circles centred on each facility. They ignore roads entirely and assume people travel in straight lines. This tends to overestimate accessibility in areas with poor connectivity (mountains, rivers, sparse roads) and underestimate it along major highways.
+
+The main advantages are speed and reproducibility: no API key, no network data, immediate computation.
+
+```{r buffers}
+distancias <- c(5000, 10000, 15000)   # metres
+
+buffers_final <- purrr::map_dfr(
+  distancias,
+  ~ st_buffer(unidad_salud_sf_metros, dist = .x) %>%
+      mutate(
+        distancia_m  = .x,
+        distancia_km = .x / 1000,
+        banda        = case_when(
+          distancia_km == 5  ~ "0-5",
+          distancia_km == 10 ~ "5-10",
+          distancia_km == 15 ~ "10-15"
+        )
+      )
+)
+```
+
+### Coverage map — buffers
+
+We repeat the same coverage diagnostic for buffers so the comparison is direct.
+
+```{r cobertura_buf}
+# Union of all buffer polygons
+cobertura_buf <- buffers_final %>%
+  st_union() %>%
+  st_make_valid() %>%
+  st_transform(4326)
+
+# Census centroids outside any buffer
+fuera_buf <- centroides_dmq %>%
+  filter(!lengths(st_intersects(., cobertura_buf)))
+
+message(nrow(fuera_buf), " of ", nrow(centroides_dmq),
+        " centroids outside buffer coverage (",
+        round(100 * nrow(fuera_buf) / nrow(centroides_dmq), 1), "%)")
+```
+
+```{r mapa_cobertura_buf}
+leaflet() |>
+  addTiles() |>
+  addPolygons(
+    data        = st_as_sf(data.frame(geometry = cobertura_buf)),
+    fillColor   = "darkorange",
+    fillOpacity = 0.25,
+    color       = "darkorange",
+    weight      = 1,
+    group       = "Buffer coverage"
+  ) |>
+  addCircleMarkers(
+    data   = unidad_salud_sf,
+    radius = 4,
+    color  = "blue",
+    label  = ~unicodigo,
+    group  = "Facilities"
+  ) |>
+  addCircleMarkers(
+    data   = fuera_buf,
+    radius = 4,
+    color  = "red",
+    label  = "Outside coverage",
+    group  = "Outside coverage"
+  ) |>
+  addLayersControl(
+    overlayGroups = c("Buffer coverage", "Facilities", "Outside coverage"),
+    options       = layersControlOptions(collapsed = FALSE)
+  )
+```
+
+---
+
+## Side-by-side comparison: isochrone vs buffer for one facility
+
+The map below overlays the isochrones and the buffer rings for the same facility. The isochrone follows road geometry — stretching along highways, contracting in mountainous terrain — while the buffer is a perfect circle regardless of terrain.
+
+```{r mapa_comparacion}
+facility_id <- unidad_salud_sf$unicodigo[1]
+
+iso_ejemplo    <- iso %>% filter(hospital_id == facility_id)
+buffer_ejemplo <- buffers_final %>%
+  filter(unicodigo == facility_id) %>%
+  st_transform(4326)
+
+leaflet() |>
+  addTiles() |>
+  addPolygons(
+    data        = iso_ejemplo,
+    color       = "steelblue",
+    weight      = 2,
+    fillOpacity = 0.25,
+    popup       = ~banda,
+    group       = "Isochrones"
+  ) |>
+  addPolygons(
+    data        = buffer_ejemplo,
+    color       = "darkorange",
+    weight      = 2,
+    fillOpacity = 0.15,
+    popup       = ~banda,
+    group       = "Buffers"
+  ) |>
+  addCircleMarkers(
+    data   = unidad_salud_sf[unidad_salud_sf$unicodigo == facility_id, ],
+    radius = 6,
+    color  = "black",
+    group  = "Facility"
+  ) |>
+  addLayersControl(
+    overlayGroups = c("Isochrones", "Buffers", "Facility"),
+    options       = layersControlOptions(collapsed = FALSE)
+  )
+```
+
+---
+
+# Section 3: Supply capacity
+
+::: callout-note
+## Objectives
+
+1. Import the doctor count table by parish.
+2. Compute total doctors per parish across six primary care specialties.
+3. Assign the parish-level supply to each health facility via spatial join.
+4. Attach supply information to both catchment area datasets.
+:::
+
+Doctor counts are reported at the parish level in the census. Each facility inherits the supply of the parish where it is located. We aggregate six specialties: general medicine, family medicine, pediatrics, obstetrics-gynecology, dentistry, and internal medicine.
+
+```{r oferta}
+parroquias <- read_csv("../data/capacidad_pichincha_parroquias.csv")
+
+parroquias <- parroquias %>%
+  mutate(
+    medicos  = medicina_general +
+               medicina_familiar +
+               pediatria +
+               ginecologia_obstetricia +
+               odontologia +
+               medicina_interna,
+    parr_ubi = as.character(parr_ubi)
+  )
+
+# Assign each facility to its parish via spatial join
+unidad_interseccion <- st_join(
+  unidad_salud_sf,
+  df,
+  join = st_intersects
+)
+
+# Look up doctor count for each facility's parish
+parroquias_medicos <- unidad_interseccion %>%
+  select(hospital_id = unicodigo, parroqu) %>%
+  left_join(parroquias, by = c("parroqu" = "parr_ubi")) %>%
+  select(hospital_id, parroqu, medicos)
+
+# Attach supply to isochrones
+# Note: st_set_geometry keeps only the polygon geometry (geom), dropping
+# the point geometry that came from parroquias_medicos
+isocronas <- iso %>%
+  left_join(as_tibble(parroquias_medicos), by = "hospital_id") %>%
+  st_set_geometry("geom")
+
+# Attach supply to buffers
+buffers <- buffers_final %>%
+  left_join(
+    as_tibble(parroquias_medicos) %>%
+      rename(unicodigo = hospital_id),
+    by = "unicodigo"
+  )
+```
+
+---
+
+# Section 4: Origin-destination matrix
+
+::: callout-note
+## Objectives
+
+1. Identify which census zone centroids fall within each catchment area.
+2. Retain only the closest band when a centroid falls inside multiple rings.
+3. Produce parallel matrices — one for isochrones, one for buffers.
+:::
+
+This step links supply to demand. A spatial join assigns each census centroid to every catchment ring it falls inside. When a centroid is covered by multiple concentric rings of the same facility we keep only the innermost one, because that represents the shortest travel time.
+
+## Isochrone matrix
+
+```{r matriz_isocronas}
+interseccion_iso <- st_join(
+  centroides_dmq,
+  isocronas,
+  join = st_intersects
+)
+
+# Keep the innermost band per (census zone, facility) pair
+interseccion_iso <- interseccion_iso %>%
+  group_by(sec, hospital_id) %>%
+  arrange(minutos, .by_group = TRUE) %>%
+  slice(1) %>%
+  ungroup()
+```
+
+## Buffer matrix
+
+```{r matriz_buffers}
+interseccion_buffers <- st_join(
+  centroides_dmq_metros,
+  st_transform(buffers, st_crs(centroides_dmq_metros)),
+  join = st_intersects
+)
+
+# Keep the innermost band per (census zone, facility) pair
+interseccion_buffers <- interseccion_buffers %>%
+  group_by(sec, unicodigo) %>%
+  arrange(banda, .by_group = TRUE) %>%
+  slice(1) %>%
+  ungroup()
+```
+
+---
+
+# Section 5: Spatial impedance weights
+
+::: callout-note
+## Objectives
+
+1. Define a Gaussian decay function to model how accessibility decreases with distance.
+2. Compute weights for each time or distance band.
+3. Assign weights to both matrices.
+:::
+
+The E2SFCA method weights each zone by how far it is from the facility: a zone in the innermost ring contributes more than one in the outermost ring. We model this friction with a **Gaussian decay function**:
+
+$$W(d) = e^{-\left(\frac{d - d_{min}}{\beta}\right)^2}$$
+
+where $\beta$ is calibrated so that the weight approaches 0.01 at $d_{max}$.
+
+## Gaussian impedance function
+
+```{r impedancia}
+impedancia <- function(mintiempo, subzonatiempo, maxtiempo) {
+  beta <- -((maxtiempo - mintiempo)^2) / log(0.01)
+  peso <- exp(-(subzonatiempo - mintiempo)^2 / beta)
+  round(peso, 2)
+}
+```
+
+The `mintiempo` parameter is set to 5 (not 0) to avoid assigning a perfect weight to a hypothetical zero-travel-time case. Even the closest users need some time to reach the facility.
+
+## Isochrone weights (0–30 min)
+
+```{r pesos_iso}
+peso_NA     <- NA
+peso_iso_10 <- impedancia(mintiempo = 5, subzonatiempo =  5, maxtiempo = 30)
+peso_iso_20 <- impedancia(mintiempo = 5, subzonatiempo = 15, maxtiempo = 30)
+peso_iso_30 <- impedancia(mintiempo = 5, subzonatiempo = 25, maxtiempo = 30)
+
+interseccion_iso <- interseccion_iso %>%
+  mutate(
+    w = case_when(
+      banda == "0-10"  ~ peso_iso_10,
+      banda == "10-20" ~ peso_iso_20,
+      banda == "20-30" ~ peso_iso_30,
+      TRUE             ~ peso_NA
+    )
+  )
+```
+
+The weights decrease with travel time:
+
+| Band    | Midpoint | Weight |
+|---------|----------|--------|
+| 0–10 min  | 5 min  | `r peso_iso_10` |
+| 10–20 min | 15 min | `r peso_iso_20` |
+| 20–30 min | 25 min | `r peso_iso_30` |
+
+## Buffer weights (0–15 km)
+
+For buffers we use distance in kilometres as the impedance argument. The logic is identical but the scale is spatial rather than temporal.
+
+```{r pesos_buffers}
+peso_buf_5  <- impedancia(mintiempo = 5, subzonatiempo =  2.5, maxtiempo = 15)
+peso_buf_10 <- impedancia(mintiempo = 5, subzonatiempo =  7.5, maxtiempo = 15)
+peso_buf_15 <- impedancia(mintiempo = 5, subzonatiempo = 12.5, maxtiempo = 15)
+
+interseccion_buffers <- interseccion_buffers %>%
+  mutate(
+    w = case_when(
+      banda == "0-5"   ~ peso_buf_5,
+      banda == "5-10"  ~ peso_buf_10,
+      banda == "10-15" ~ peso_buf_15,
+      TRUE             ~ peso_NA
+    )
+  )
+```
+
+| Band      | Midpoint  | Weight |
+|-----------|-----------|--------|
+| 0–5 km    | 2.5 km    | `r peso_buf_5` |
+| 5–10 km   | 7.5 km    | `r peso_buf_10` |
+| 10–15 km  | 12.5 km   | `r peso_buf_15` |
+
+---
+
+# Section 6: E2SFCA index computation
+
+::: callout-note
+## Objectives
+
+1. Compute the weighted demand catchment for each facility (Step 1).
+2. Derive the supply-to-demand ratio per facility.
+3. Aggregate ratios to the census zone level (Step 2).
+4. Normalize the index relative to the regional mean.
+:::
+
+The E2SFCA method has two steps. In **Step 1** we look from the supply side: given all the population each facility can serve, what is its doctor-to-population ratio? In **Step 2** we look from the demand side: adding up all the ratios a census zone can reach, what is its total accessibility score?
+
+**Step 1 — supply-to-demand ratio per facility:**
+
+$$R_j = \frac{S_j}{\displaystyle\sum_{k \in \{d_{kj} \leq d_0\}} P_k \cdot W_{kj}}$$
+
+**Step 2 — accessibility index per census zone:**
+
+$$A_i = \sum_{j \in \{d_{ij} \leq d_0\}} R_j \cdot W_{ij}$$
+
+Note that $W_r$ does **not** cancel between the two steps: in Step 1 it down-weights distant demand in the denominator, and in Step 2 it down-weights distant supply in the numerator. The two operations act on different objects and in opposite directions.
+
+---
+
+## 6A — E2SFCA with isochrones
+
+### Step 1: Weighted demand per facility
+
+```{r e2sfca_iso_step1}
+step1_iso <- interseccion_iso %>%
+  st_drop_geometry() %>%
+  filter(!is.na(hospital_id)) %>%
+  # One row per (facility, census zone) — avoid double-counting
+  distinct(hospital_id, sec, .keep_all = TRUE) %>%
+  group_by(hospital_id) %>%
+  summarise(
+    poblacion_atendida = sum(poblacion * w, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+### Step 2: Supply-to-demand ratio per facility
+
+```{r e2sfca_iso_step2}
+ratios_iso <- isocronas %>%
+  as_tibble() %>%
+  distinct(hospital_id, medicos) %>%
+  left_join(step1_iso, by = "hospital_id") %>%
+  mutate(
+    ratio_final = medicos / poblacion_atendida
+  )
+```
+
+### Step 3: Accessibility index per census zone
+
+```{r e2sfca_iso_step3}
+accesibilidad_iso <- interseccion_iso %>%
+  st_drop_geometry() %>%
+  filter(!is.na(hospital_id)) %>%
+  left_join(
+    ratios_iso %>% select(hospital_id, ratio_final),
+    by = "hospital_id"
+  ) %>%
+  mutate(contribucion = ratio_final * w) %>%
+  group_by(sec) %>%
+  summarise(
+    accesibilidad = sum(contribucion, na.rm = TRUE),
+    .groups       = "drop"
+  ) %>%
+  mutate(
+    indice = accesibilidad / mean(accesibilidad, na.rm = TRUE)
+  )
+```
+
+---
+
+## 6B — E2SFCA with buffers
+
+### Step 1: Weighted demand per facility
+
+```{r e2sfca_buf_step1}
+step1_buffers <- interseccion_buffers %>%
+  st_drop_geometry() %>%
+  filter(!is.na(unicodigo)) %>%
+  distinct(unicodigo, sec, .keep_all = TRUE) %>%
+  group_by(unicodigo) %>%
+  summarise(
+    poblacion_atendida = sum(poblacion * w, na.rm = TRUE),
+    .groups            = "drop"
+  )
+```
+
+### Step 2: Supply-to-demand ratio per facility
+
+```{r e2sfca_buf_step2}
+ratios_buffers <- buffers %>%
+  as_tibble() %>%
+  distinct(unicodigo, medicos) %>%
+  left_join(step1_buffers, by = "unicodigo") %>%
+  mutate(
+    ratio_final = medicos / poblacion_atendida
+  )
+```
+
+### Step 3: Accessibility index per census zone
+
+```{r e2sfca_buf_step3}
+accesibilidad_buffers <- interseccion_buffers %>%
+  st_drop_geometry() %>%
+  filter(!is.na(unicodigo)) %>%
+  left_join(
+    ratios_buffers %>% select(unicodigo, ratio_final),
+    by = "unicodigo"
+  ) %>%
+  mutate(contribucion = ratio_final * w) %>%
+  group_by(sec) %>%
+  summarise(
+    accesibilidad = sum(contribucion, na.rm = TRUE),
+    .groups       = "drop"
+  ) %>%
+  mutate(
+    indice = accesibilidad / mean(accesibilidad, na.rm = TRUE)
+  )
+```
+
+---
+
+# Section 7: Results and comparison
+
+::: callout-note
+## Objectives
+
+1. Map the accessibility index from both methods.
+2. Identify and map zones with low accessibility under each method.
+3. Compare the coverage limitations of isochrones vs buffers.
+4. Reflect on what each method reveals — and conceals.
+:::
+
+## Join indices to spatial polygons
+
+```{r prep_mapas}
+iso_sf <- df %>%
+  left_join(accesibilidad_iso, by = "sec")
+
+buf_sf <- df %>%
+  left_join(accesibilidad_buffers, by = "sec")
+```
+
+## Map 1 — Isochrone-based accessibility index
+
+Zones with `NA` index were outside all isochrone catchments. Grey zones represent areas with no computed accessibility — not necessarily inaccessible, but uncovered by our facility data.
+
+```{r mapa_iso}
+paleta_iso <- colorNumeric(
+  palette  = "viridis",
+  domain   = iso_sf$indice,
+  na.color = "grey80"
+)
+
+leaflet(iso_sf) |>
+  addTiles() |>
+  addPolygons(
+    fillColor   = ~paleta_iso(indice),
+    fillOpacity = 0.7,
+    color       = "white",
+    weight      = 0.5,
+    popup       = ~paste0("Zone: ", sec,
+                          "<br>Index: ", round(indice, 3))
+  ) |>
+  addCircleMarkers(
+    data   = unidad_salud_sf,
+    radius = 4,
+    color  = "red",
+    label  = ~unicodigo,
+    group  = "Facilities"
+  ) |>
+  addLegend(
+    "topright",
+    pal     = paleta_iso,
+    values  = ~indice,
+    title   = "E2SFCA index<br>(isochrones)",
+    opacity = 1
+  ) |>
+  addLayersControl(
+    overlayGroups = "Facilities",
+    options       = layersControlOptions(collapsed = FALSE)
+  )
+```
+
+## Map 2 — Buffer-based accessibility index
+
+```{r mapa_buf}
+paleta_buf <- colorNumeric(
+  palette  = "viridis",
+  domain   = buf_sf$indice,
+  na.color = "grey80"
+)
+
+leaflet(buf_sf) |>
+  addTiles() |>
+  addPolygons(
+    fillColor   = ~paleta_buf(indice),
+    fillOpacity = 0.7,
+    color       = "white",
+    weight      = 0.5,
+    popup       = ~paste0("Zone: ", sec,
+                          "<br>Index: ", round(indice, 3))
+  ) |>
+  addCircleMarkers(
+    data   = unidad_salud_sf,
+    radius = 4,
+    color  = "red",
+    label  = ~unicodigo,
+    group  = "Facilities"
+  ) |>
+  addLegend(
+    "topright",
+    pal     = paleta_buf,
+    values  = ~indice,
+    title   = "E2SFCA index<br>(buffers)",
+    opacity = 1
+  ) |>
+  addLayersControl(
+    overlayGroups = "Facilities",
+    options       = layersControlOptions(collapsed = FALSE)
+  )
+```
+
+## Map 3 — Low accessibility zones: isochrones
+
+Zones with an index below 0.25 are severely below average and may represent priority areas for health policy.
+
+```{r mapa_bajo_iso}
+no_acc_iso <- accesibilidad_iso %>%
+  filter(indice < 0.25, indice > 0) %>%
+  arrange(indice)
+
+no_acc_iso_sf <- df %>%
+  right_join(no_acc_iso, by = "sec")
+
+paleta_bajo_iso <- colorNumeric(
+  palette  = "Reds",
+  domain   = no_acc_iso_sf$indice,
+  na.color = "grey80"
+)
+
+leaflet() |>
+  addTiles() |>
+  addPolygons(
+    data        = prr,
+    color       = "grey60",
+    weight      = 1,
+    fillOpacity = 0.05
+  ) |>
+  addPolygons(
+    data        = no_acc_iso_sf,
+    fillColor   = ~paleta_bajo_iso(indice),
+    fillOpacity = 0.8,
+    color       = "white",
+    weight      = 0.5,
+    popup       = ~paste0("Zone: ", sec,
+                          "<br>Index: ", round(indice, 3))
+  ) |>
+  addCircleMarkers(
+    data   = unidad_salud_sf,
+    radius = 4,
+    color  = "blue",
+    label  = ~unicodigo
+  ) |>
+  addLegend(
+    "topright",
+    pal     = paleta_bajo_iso,
+    values  = no_acc_iso_sf$indice,
+    title   = "Low access index<br>(isochrones)",
+    opacity = 1
+  )
+```
+
+## Map 4 — Low accessibility zones: buffers
+
+```{r mapa_bajo_buf}
+no_acc_buf <- accesibilidad_buffers %>%
+  filter(indice < 0.25, indice > 0) %>%
+  arrange(indice)
+
+no_acc_buf_sf <- df %>%
+  right_join(no_acc_buf, by = "sec")
+
+paleta_bajo_buf <- colorNumeric(
+  palette  = "Oranges",
+  domain   = no_acc_buf_sf$indice,
+  na.color = "grey80"
+)
+
+leaflet() |>
+  addTiles() |>
+  addPolygons(
+    data        = prr,
+    color       = "grey60",
+    weight      = 1,
+    fillOpacity = 0.05
+  ) |>
+  addPolygons(
+    data        = no_acc_buf_sf,
+    fillColor   = ~paleta_bajo_buf(indice),
+    fillOpacity = 0.8,
+    color       = "white",
+    weight      = 0.5,
+    popup       = ~paste0("Zone: ", sec,
+                          "<br>Index: ", round(indice, 3))
+  ) |>
+  addCircleMarkers(
+    data   = unidad_salud_sf,
+    radius = 4,
+    color  = "blue",
+    label  = ~unicodigo
+  ) |>
+  addLegend(
+    "topright",
+    pal     = paleta_bajo_buf,
+    values  = no_acc_buf_sf$indice,
+    title   = "Low access index<br>(buffers)",
+    opacity = 1
+  )
+```
+
+## Map 5 — Comparison: which zones are flagged by each method?
+
+This final map puts both sets of low-access zones on the same canvas, making the methodological differences visible at a glance.
+
+```{r mapa_comparacion_final}
+no_acc_iso_pts <- centroides_dmq %>%
+  right_join(no_acc_iso %>% distinct(sec), by = "sec")
+
+no_acc_buf_pts <- st_transform(centroides_dmq_metros, 4326) %>%
+  right_join(no_acc_buf %>% distinct(sec), by = "sec")
+
+leaflet() |>
+  addTiles() |>
+  addPolygons(
+    data        = prr,
+    color       = "grey60",
+    weight      = 1,
+    fillOpacity = 0.05
+  ) |>
+  addCircleMarkers(
+    data   = unidad_salud_sf,
+    radius = 4,
+    color  = "blue",
+    label  = "Health facility",
+    group  = "Facilities"
+  ) |>
+  addCircleMarkers(
+    data   = no_acc_iso_pts,
+    radius = 5,
+    color  = "steelblue",
+    fillOpacity = 0.7,
+    group  = "Low access — isochrones"
+  ) |>
+  addCircleMarkers(
+    data   = no_acc_buf_pts,
+    radius = 5,
+    color  = "darkorange",
+    fillOpacity = 0.7,
+    group  = "Low access — buffers"
+  ) |>
+  addLayersControl(
+    overlayGroups = c("Facilities",
+                      "Low access — isochrones",
+                      "Low access — buffers"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) |>
+  addLegend(
+    "bottomright",
+    colors = c("blue", "steelblue", "darkorange"),
+    labels = c("Health facilities",
+               "Low access — isochrones",
+               "Low access — buffers")
+  )
+```
+
+## Discussion: isochrones vs buffers
+
+| Dimension | Isochrones | Buffers |
+|-----------|-----------|---------|
+| Catchment shape | Follows road network | Perfect circle |
+| Data requirements | Routing API + key | None |
+| Computation | Minutes to hours | Seconds |
+| Coverage gaps | Concentrated in remote areas | Often fewer gaps, but misleading |
+| Realism | High in data-rich regions | Low — ignores terrain and roads |
+| Reproducibility | API-dependent, may vary | Fully reproducible |
+
+::: callout-important
+**A note on isochrone variability across time:** in this dataset the HERE API returned near-identical geometries for different departure times. This reflects a limitation in HERE's traffic coverage for this specific area, not a fundamental property of isochrones. In data-rich urban contexts (e.g. Bogotá, São Paulo) the differences between peak-hour and off-peak isochrones can be substantial and should be modelled explicitly.
+:::
+
+---
+
+# Your turn: replicate the index for a single specialty
+
+In the analysis above we used the **total doctor count** across six specialties as the supply measure. Your task is to replicate the E2SFCA index — using either isochrones or buffers — for **one specialty of your choice**.
+
+The available specialties in `capacidad_pichincha_parroquias.csv` are:
+
+- `medicina_general`
+- `medicina_familiar`
+- `pediatria`
+- `ginecologia_obstetricia`
+- `odontologia`
+- `medicina_interna`
+
+To complete the exercise:
+
+1. Modify the supply assignment chunk so that `medicos` equals the count for your chosen specialty only.
+2. Re-run Sections 5, 6, and 7 with the new supply variable.
+3. Map the resulting index and compare the spatial pattern to the full-supply version.
+
+**Discussion questions:** Does the spatial concentration of low-access zones change? Which specialty produces the most unequal distribution? What does that imply for health policy in Pichincha?

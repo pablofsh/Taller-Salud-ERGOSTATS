@@ -64,7 +64,6 @@ centroides_dmq_metros <- st_centroid(df) %>%
 
 st_crs(centroides_dmq_metros)
 
-rm("df")
 ```
 
 # Sección 2: Construcción de áreas de cobertura mediante buffers
@@ -132,12 +131,11 @@ buffers <- buffers_final %>%
 
 # Sección 4: Construcción de la matriz origen-destino
 
-:::callout-note
-
+::: callout-note
 ## Objetivos de esta sección
-1. Identificar qué zonas censales se encuentran dentro del área de influencia de cada establecimiento.
-1. Construir la matriz espacial que relaciona oferta y demanda.
 
+1.  Identificar qué zonas censales se encuentran dentro del área de influencia de cada establecimiento.
+2.  Construir la matriz espacial que relaciona oferta y demanda.
 :::
 
 Para determinar qué población puede acceder potencialmente a cada establecimiento se realiza una intersección espacial entre los centroides censales y los buffers construidos previamente.
@@ -172,11 +170,11 @@ interseccion_buffers <- interseccion_buffers %>%
 
 # Sección 5: Asignación de pesos de impedancia espacial
 
-:::callout-note
-
+::: callout-note
 ## Objetivos de esta sección
-1. Representar el efecto de la distancia sobre la accesibilidad.
-1. Asignar una ponderación distinta a cada banda de distancia.
+
+1.  Representar el efecto de la distancia sobre la accesibilidad.
+2.  Asignar una ponderación distinta a cada banda de distancia.
 :::
 
 La accesibilidad disminuye a medida que aumenta la distancia entre la población y los establecimientos de salud. Para representar este fenómeno se asignan pesos de impedancia a cada banda de distancia.
@@ -253,12 +251,12 @@ interseccion_buffers <- interseccion_buffers %>%
 
 # Sección 6: Cálculo del índice de accesibilidad E2SFCA usando buffers
 
-:::callout-note
-
+::: callout-note
 ## Objetivos de esta sección
-1. Calcular la población ponderada atendida por cada establecimiento.
-1. Estimar la razón oferta-demanda de cada unidad de salud.
-1. Calcular la accesibilidad potencial para cada zona censal.
+
+1.  Calcular la población ponderada atendida por cada establecimiento.
+2.  Estimar la razón oferta-demanda de cada unidad de salud.
+3.  Calcular la accesibilidad potencial para cada zona censal.
 :::
 
 El método E2SFCA se desarrolla en dos pasos. Primero se calcula la razón oferta-demanda para cada establecimiento y posteriormente se estima la accesibilidad potencial de cada zona censal.
@@ -340,6 +338,38 @@ accesibilidad_buffers <- interseccion_buffers %>%
         accesibilidad,
         na.rm = TRUE
       )
+  )
+
+
+
+mi_paleta <- colorNumeric(
+  palette = "YlOrRd", 
+  domain = accesibilidad_buffers$indice # Asegúrate de referenciar el rango numérico de tu variable
+)
+
+df <- st_transform(df, crs = 4326)
+df <- st_make_valid(df)
+
+prr <- df %>% group_by(parroqu) %>% summarise()
+
+leaflet() |>
+  addTiles() |>
+  addCircleMarkers(
+    data = unidad_salud_sf,
+    radius = 5,
+    color = "blue"
+  ) |>
+  # addCircleMarkers(
+  #   data = no_accesibles_puntos,
+  #   radius = 5,
+  #   color = "red"
+  # ) %>%
+  addPolygons(
+    data = df %>% left_join(accesibilidad_buffers),
+    fillColor = ~mi_paleta(indice), # Mapea el color de relleno a la variable
+    fillOpacity = 0.7,              # Opacidad del relleno (0 a 1)
+    color = "white",                # Color del borde del polígono
+    weight = 1                      # Grosor del borde
   )
 ```
 

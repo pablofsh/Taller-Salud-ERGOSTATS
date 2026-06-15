@@ -144,9 +144,9 @@ Los escenarios seleccionados representan distintos momentos de la semana en los 
 
 Para cada establecimiento de salud y para cada escenario temporal se generan tres zonas de accesibilidad:
 
--   0–10 minutos
--   10–20 minutos
--   20–30 minutos
+- 0–10 minutos
+- 10–20 minutos
+- 20–30 minutos
 
 Los tiempos de viaje se calculan utilizando la red vial y las condiciones de tráfico estimadas por HERE.
 
@@ -317,7 +317,8 @@ La oferta de servicios de salud se representó mediante el número de profesiona
 Primero se importaron las isócronas generadas para cada unidad de salud:
 
 ```{r}
-iso <- st_read("../data/gpkg/isocronas_unidades_salud.gpkg")
+iso <- bind_rows(st_read("../data/gpkg/isocronas_unidad_salud.gpkg"),
+                 st_read("../data/gpkg/isocronas_unidad_salud_faltantes.gpkg"))
 ```
 
 ## Calcular la capacidad de oferta por parroquia
@@ -484,6 +485,12 @@ interseccion <- interseccion %>%
 Finalmente, se incorporan los pesos definitivos utilizados en el análisis y se eliminan variables auxiliares que ya no son necesarias para los pasos posteriores.
 
 ```{r}
+
+weights <- tibble::tibble(
+  banda = c("0-10", "10-20", "20-30"),
+  w = c(1, 0.7, 0.4)
+)
+
 interseccion <- interseccion %>% 
   left_join(weights, by = "banda") %>% 
   select(-c(range, minutos))
@@ -577,8 +584,7 @@ El segundo paso del método E2SFCA consiste en calcular la accesibilidad potenci
 
 La accesibilidad potencial para una zona censal $i$ se define como:
 
-$$
-\begin{aligned}
+$$\begin{aligned}
 A_i^F
 &= \sum_{j \in \{d_{ij} \in D_r\}} R_j W_r \\
 &= \sum_{j \in \{d_{ij} \in D_1\}} R_j W_1
@@ -645,9 +651,9 @@ Con el objetivo de facilitar la comparación espacial entre zonas censales, la a
 
 De esta manera:
 
--   Valores mayores a 1 indican accesibilidad superior al promedio.
--   Valores cercanos a 1 indican accesibilidad promedio.
--   Valores menores a 1 indican accesibilidad inferior al promedio.
+- Valores mayores a 1 indican accesibilidad superior al promedio.
+- Valores cercanos a 1 indican accesibilidad promedio.
+- Valores menores a 1 indican accesibilidad inferior al promedio.
 
 El resultado final corresponde al índice de accesibilidad espacial E2SFCA utilizado en el análisis.
 
@@ -689,6 +695,9 @@ no_accesibles_puntos <- centroides_dmq %>%
 Finalmente, se representa la localización de las unidades de salud y de las zonas censales con baja accesibilidad mediante un mapa interactivo.
 
 ```{r}
+
+prr <- df %>% group_by(parroqu) %>% summarise()
+
 leaflet() |>
   addTiles() |>
   addCircleMarkers(
@@ -700,6 +709,10 @@ leaflet() |>
     data = no_accesibles_puntos,
     radius = 5,
     color = "red"
+  ) %>% 
+  addPolygons(
+    data = prr,
+    color = "purple",
   )
 ```
 
